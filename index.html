@@ -14,20 +14,20 @@
     color: white;
     display: flex;
     flex-direction: column;
-    height: 100vh;
     align-items: center;
     justify-content: center;
+    height: 100vh;
     padding: 20px;
   }
 
   h1 {
-    font-size: 22px;
-    margin-bottom: 10px;
+    font-size: 20px;
+    margin-bottom: 12px;
   }
 
   input {
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     padding: 14px;
     border-radius: 12px;
     border: none;
@@ -47,65 +47,53 @@
     margin-bottom: 20px;
   }
 
-  .sticker {
-    margin-top: 20px;
-    font-size: 64px;
-    padding: 30px;
+  img {
+    width: 260px;
+    height: 260px;
+    object-fit: cover;
     border-radius: 24px;
     background: #1a1a1a;
-    min-width: 120px;
-    min-height: 120px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
   }
 
   .hint {
-    opacity: 0.6;
-    font-size: 13px;
+    margin-top: 12px;
+    opacity: 0.5;
+    font-size: 12px;
     text-align: center;
-    margin-top: 10px;
   }
 </style>
 </head>
 
 <body>
 
-<h1>Text → Sticker Generator</h1>
+<h1>Text → Sticker Image Generator</h1>
 
-<input id="text" placeholder="type something like 'fire cat'">
+<input id="text" placeholder="type something like: fire cat sticker">
 
 <button onclick="generate()">Generate Sticker</button>
 
-<div class="sticker" id="sticker">🙂</div>
+<img id="img">
 
 <div class="hint">
-  No login • works offline-style • instant stickers
+  Free AI image generation • no login • uses public API
 </div>
 
 <script>
 function generate() {
-  const input = document.getElementById("text").value.toLowerCase();
-  const sticker = document.getElementById("sticker");
+  const text = document.getElementById("text").value;
+  const img = document.getElementById("img");
 
-  // simple “AI-style” mapping system
-  let output = "✨";
+  if (!text) return;
 
-  if (input.includes("fire")) output = "🔥";
-  if (input.includes("cat")) output = "🐱";
-  if (input.includes("dog")) output = "🐶";
-  if (input.includes("skull")) output = "💀";
-  if (input.includes("love")) output = "❤️";
-  if (input.includes("money")) output = "💸";
-  if (input.includes("angel")) output = "😇";
-  if (input.includes("devil")) output = "😈";
-  if (input.includes("cry")) output = "😭";
-  if (input.includes("cool")) output = "😎";
-  if (input.includes("fire cat")) output = "🐱🔥";
-  if (input.includes("evil cat")) output = "🐱😈";
-  if (input.includes("ghost")) output = "👻";
+  // Pollinations AI (free image generator)
+  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(
+    text + ", cute sticker, centered, clean background, high quality, digital sticker style"
+  );
 
-  sticker.innerText = output;
+  img.src = url;
+  img.style.display = "block";
 }
 </script>
 
