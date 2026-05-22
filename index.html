@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Genmoji Sticker Studio</title>
+    <title>AI Genmoji Sticker Generator</title>
     <style>
         * {
             box-sizing: border-box;
@@ -87,16 +87,6 @@
             text-align: center;
             min-height: 20px;
         }
-        .hints {
-            font-size: 0.75rem;
-            color: #6b7280;
-            line-height: 1.5;
-        }
-        .hints b {
-            color: #ff7e5f;
-            cursor: pointer;
-            text-decoration: underline;
-        }
         
         /* Fullscreen Stage UI Layout */
         .preview-stage {
@@ -115,7 +105,6 @@
             display: none;
             cursor: pointer;
         }
-        /* Loader Spinner Configuration */
         .spinner {
             width: 50px;
             height: 50px;
@@ -138,41 +127,28 @@
         <div class="control-panel">
             <div class="branding">
                 <h1>Genmoji Studio</h1>
-                <p style="color: #9ca3af; font-size: 0.85rem;">True Isolated AI Image Sticker Generator</p>
+                <p style="color: #9ca3af; font-size: 0.85rem;">Cloudflare Workers AI Powered Sticker Generator</p>
             </div>
 
-            <!-- Input Box prompt form field -->
             <div class="input-group">
                 <label>What sticker do you want?</label>
-                <input type="text" id="prompt-input" value="candy" placeholder="Type a word...">
-                <p class="hints">
-                    Quick words: 
-                    <b onclick="quickFill('candy')">candy</b>, 
-                    <b onclick="quickFill('pizza')">pizza</b>, 
-                    <b onclick="quickFill('cute cat')">cat</b>, 
-                    <b onclick="quickFill('robot')">robot</b>, 
-                    <b onclick="quickFill('fire monster')">fire</b>
-                </p>
+                <input type="text" id="prompt-input" value="" placeholder="Type anything..." autocomplete="off">
             </div>
 
-            <!-- Generate Button Interface elements -->
             <button class="gen-btn" id="generate-btn">Generate AI Sticker</button>
-            <div class="status-msg" id="status-text">Ready to run.</div>
+            <div class="status-msg" id="status-text">Type a word and hit Generate.</div>
 
             <p style="color: #6b7280; font-size: 0.75rem; margin-top: auto; line-height: 1.4;">
                 💡 <b>How to save:</b> Once generated, right-click or long-press directly on the final image preview to save it as a transparent PNG file.
             </p>
         </div>
 
-        <!-- Fullscreen Canvas Staging Presenter Grid -->
         <div class="preview-stage">
             <div class="spinner" id="loading-spinner"></div>
-            <!-- The Native Right-Click Save Target -->
             <img id="sticker-output" alt="Your Generated AI Sticker">
         </div>
     </div>
 
-    <!-- Processing Pipeline Canvas Element -->
     <canvas id="hidden-canvas" width="512" height="512"></canvas>
 
     <script>
@@ -185,47 +161,46 @@
         const canvas = document.getElementById('hidden-canvas');
         const ctx = canvas.getContext('2d');
 
+        // Force reset input on load to completely kill form cache bugs
+        window.addEventListener('load', () => { promptInput.value = ''; });
+
         async function generateAISticker() {
             const userPrompt = promptInput.value.trim();
-            if (!userPrompt) return alert("Please type an object name!");
+            if (!userPrompt) return alert("Please enter a word to generate!");
 
-            // Update UI State layout elements
             generateBtn.disabled = true;
             spinner.style.display = "block";
             imgOutput.style.display = "none";
             statusText.textContent = "AI engine is drawing...";
 
-            // Constructing an optimized layout string to make the AI force object isolation over plain black backgrounds
-            const targetPrompt = `${userPrompt}, 3d cute emoji sticker layout, centered single object, solid completely black background, professional digital app illustration style, high resolution`;
-            const seed = Math.floor(Math.random() * 999999);
-            
-            // Corrected, stable 2026 Pollinations network route structure using the validated /image endpoint
-            const fetchUrl = `https://pollinations.ai{encodeURIComponent(targetPrompt)}?width=512&height=512&seed=${seed}&enhance=false&nologo=true&key=public-client-sticker-studio`;
+            // Structural layout rules sent to the generator
+            const finalPrompt = `${userPrompt}, cute 3d emoji sticker icon, centered single object, solid pure pitch-black background, digital art vector illustration style`;
 
             try {
-                // FETCH CONVERSION BLOCK: Downloads image as array data blocks to completely prevent CORS canvas security locks
-                const response = await fetch(fetchUrl);
-                if (!response.ok) throw new Error("Network generation error");
+                // Completely decoupled from Pollinations. Routes through an open Cloudflare Workers AI edge node.
+                const response = await fetch("https://workers.dev", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt: finalPrompt })
+                });
+
+                if (!response.ok) throw new Error("Worker endpoint failed");
                 
                 const blob = await response.blob();
-                
-                // Convert array blocks safely into internal browser memory Base64 lines
                 const reader = new FileReader();
                 reader.readAsDataURL(blob);
                 reader.onloadend = function () {
-                    const base64data = reader.result;
-                    
                     const img = new Image();
-                    img.src = base64data;
+                    img.src = reader.result;
                     img.onload = function() {
-                        statusText.textContent = "Stripping black matrix background and cutting edges...";
+                        statusText.textContent = "Cutting sticker edges...";
                         processStickerLayers(img);
                     };
                 };
 
             } catch (error) {
                 console.error(error);
-                statusText.textContent = "Generation failed. Try re-clicking the generate button.";
+                statusText.textContent = "Server busy. Please click generate again.";
                 generateBtn.disabled = false;
                 spinner.style.display = "none";
             }
@@ -233,34 +208,62 @@
 
         function processStickerLayers(aiImage) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // 1. Draw raw AI asset matrix to canvas
             ctx.drawImage(aiImage, 0, 0, canvas.width, canvas.height);
             
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
 
-            // 2. CHROMA KEY PARSER: Wipe away black pixels to render true transparent alpha space channels
+            // Background Removal Engine (Chroma Keying)
             for (let i = 0; i < data.length; i += 4) {
-                let r = data[i];
-                let g = data[i + 1];
-                let b = data[i + 2];
-                
-                // If pixel color maps near dark background thresholds, purge alpha down to zero
-                if (r < 45 && g < 45 && b < 45) {
+                // If pixel color trends towards black background bounds, clear alpha down to 0
+                if (data[i] < 45 && data[i+1] < 45 && data[i+2] < 45) {
                     data[i + 3] = 0; 
                 }
             }
             ctx.putImageData(imgData, 0, 0);
 
-            // Copy transparency isolated item layout out to a secondary offscreen mask canvas
+            // Clone cutout mapping canvas
             const cutOutCanvas = document.createElement('canvas');
             cutOutCanvas.width = canvas.width;
             cutOutCanvas.height = canvas.height;
             const cutOutCtx = cutOutCanvas.getContext('2d');
             cutOutCtx.drawImage(canvas, 0, 0);
 
+            // Paint Die-Cut Vinyl Sticker Border
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetY = 6;
 
+            const thickness = 14; 
+            for (let angle = 0; angle < 360; angle += 15) {
+                const dx = Math.cos(angle * Math.PI / 180) * thickness;
+                const dy = Math.sin(angle * Math.PI / 180) * thickness;
+                ctx.drawImage(cutOutCanvas, dx, dy);
+            }
+
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Restore baseline parameters and overlay primary icon
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.shadowColor = 'transparent';
+            ctx.drawImage(cutOutCanvas, 0, 0);
+
+            // Export to native savable layout wrapper element
+            imgOutput.src = canvas.toDataURL('image/png');
+            spinner.style.display = "none";
+            imgOutput.style.display = "block";
+            statusText.textContent = "Sticker complete! Save it below.";
+            generateBtn.disabled = false;
+        }
+
+        generateBtn.addEventListener('click', generateAISticker);
+        promptInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') generateAISticker(); });
+    </script>
+</body>
+</html>
 
 
 
