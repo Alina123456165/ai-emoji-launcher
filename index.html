@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <title>AI Sticker App</title>
@@ -18,20 +18,31 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px;
+
+    /* FIX: safe spacing for Dynamic Island / notch */
+    padding: 70px 12px 20px 12px;
   }
 
   input {
     width: 100%;
     max-width: 360px;
-    padding: 12px;
-    border-radius: 10px;
+    padding: 14px;
+    border-radius: 12px;
     border: none;
     font-size: 16px;
   }
 
-  button {
+  select {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px;
+    border-radius: 10px;
     margin-top: 8px;
+    border: none;
+  }
+
+  button {
+    margin-top: 10px;
     padding: 10px 14px;
     border-radius: 10px;
     border: none;
@@ -43,7 +54,7 @@
   #img {
     width: 280px;
     height: 280px;
-    margin-top: 12px;
+    margin-top: 14px;
     border-radius: 18px;
     display: none;
     object-fit: cover;
@@ -54,20 +65,29 @@
     opacity: 0.7;
   }
 
-  iframe {
+  /* TOOL PANEL (fixed replacement for toggle iframe) */
+  #toolPanel {
+    position: fixed;
+    bottom: -60vh;
+    left: 0;
     width: 100%;
-    height: 55vh;
-    border: none;
-    border-radius: 12px;
-    margin-top: 12px;
-    display: none;
-    background: black;
+    height: 60vh;
+    background: #151515;
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+    transition: 0.25s ease;
+    padding: 12px;
   }
 
-  .row {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
+  #toolPanel.open {
+    bottom: 0;
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 12px;
   }
 </style>
 </head>
@@ -76,29 +96,43 @@
 
 <input id="text" placeholder="type: fire cat, anime skull">
 
-<div class="row">
-  <button onclick="generate()">Generate Sticker</button>
-  <button onclick="toggleTool()">Toggle Tool</button>
-</div>
+<select id="style">
+  <option value="cute sticker, soft lighting">Cute</option>
+  <option value="anime style, bold outline">Anime</option>
+  <option value="3d render, glossy, high detail">3D</option>
+  <option value="graffiti street art, bold colors">Graffiti</option>
+  <option value="minimal flat icon, clean design">Minimal</option>
+</select>
+
+<button onclick="generate()">Generate Sticker</button>
+<button onclick="toggleTool()">Open Tools</button>
 
 <div id="status"></div>
 
 <img id="img">
 
-<iframe id="frame"></iframe>
+<!-- TOOL DRAWER -->
+<div id="toolPanel">
+  <iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
+</div>
 
 <script>
+
+let toolOpen = false;
 
 function generate() {
   const text = document.getElementById("text").value;
   if (!text) return;
+
+  const style = document.getElementById("style").value;
 
   const img = document.getElementById("img");
   const status = document.getElementById("status");
 
   status.innerText = "Generating...";
 
-  const prompt = `${text}, sticker, clean background, high detail`;
+  const prompt = `${text}, ${style}, centered, sticker, high detail`;
+
   const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 
   const test = new Image();
@@ -110,7 +144,7 @@ function generate() {
   };
 
   test.onerror = () => {
-    status.innerText = "Failed, retrying...";
+    status.innerText = "Retrying...";
     img.src = url;
   };
 
@@ -118,19 +152,15 @@ function generate() {
 }
 
 function toggleTool() {
-  const frame = document.getElementById("frame");
+  const panel = document.getElementById("toolPanel");
 
-  if (frame.style.display === "block") {
-    frame.style.display = "none";
-    frame.src = "";
-    return;
+  toolOpen = !toolOpen;
+
+  if (toolOpen) {
+    panel.classList.add("open");
+  } else {
+    panel.classList.remove("open");
   }
-
-  frame.style.display = "block";
-
-  // IMPORTANT FIX:
-  // We only DISPLAY Perchance, we DO NOT rely on it for generation
-  frame.src = "https://perchance.org/ai-text-to-image-generator";
 }
 
 </script>
