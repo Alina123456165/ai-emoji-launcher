@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>Sticker App + Tools</title>
+<title>Sticker AI (Multi-Fallback)</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -56,89 +56,91 @@
 
   #status {
     margin-top: 10px;
-    opacity: 0.6;
-  }
-
-  iframe {
-    width: 100%;
-    height: 60vh;
-    border: none;
-    border-radius: 12px;
-    margin-top: 12px;
-    display: none;
-    background: black;
-  }
-
-  .row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: center;
+    opacity: 0.7;
+    font-size: 13px;
+    text-align: center;
   }
 </style>
 </head>
 
 <body>
 
-<h1>Sticker Generator</h1>
+<h1>Multi-AI Sticker Generator</h1>
 
-<input id="text" placeholder="type: fire cat, skull, anime dog">
+<input id="text" placeholder="type: fire cat, anime skull, neon dog">
 
-<div class="row">
+<div>
   <button onclick="generate()">Generate</button>
-  <button onclick="toggleTools()">Tools</button>
 </div>
 
 <div id="status"></div>
 
 <img id="img">
 
-<iframe id="frame"></iframe>
-
 <script>
-let toolsOpen = false;
 
-function generate() {
+const endpoints = [
+  "https://image.pollinations.ai/prompt/",
+  "https://image.pollinations.ai/prompt/"
+];
+
+function buildPrompt(text, attempt) {
+  let style = "sticker, clean background, high detail, centered";
+
+  // change prompt slightly per fallback attempt
+  if (attempt === 1) style += ", ultra sharp";
+  if (attempt === 2) style += ", cartoon style";
+  if (attempt === 3) style += ", 3d render style";
+
+  return `${text}, ${style}`;
+}
+
+async function tryGenerate(text, attempt = 0) {
+  const status = document.getElementById("status");
+  const img = document.getElementById("img");
+
+  if (attempt >= endpoints.length + 2) {
+    status.innerText = "All AI sources failed. Try again.";
+    return;
+  }
+
+  const prompt = buildPrompt(text, attempt);
+
+  const url = endpoints[0] + encodeURIComponent(prompt);
+
+  status.innerText = "Generating (AI " + (attempt + 1) + ")...";
+
+  return new Promise((resolve) => {
+    const tempImg = new Image();
+
+    tempImg.onload = () => {
+      img.src = url;
+      img.style.display = "block";
+      status.innerText = "Done (AI " + (attempt + 1) + ")";
+      resolve(true);
+    };
+
+    tempImg.onerror = () => {
+      status.innerText = "AI " + (attempt + 1) + " failed... retrying";
+      resolve(false);
+    };
+
+    tempImg.src = url;
+  });
+}
+
+async function generate() {
   const text = document.getElementById("text").value;
   if (!text) return;
 
-  const img = document.getElementById("img");
-  const status = document.getElementById("status");
+  let success = false;
 
-  status.innerText = "Generating...";
-
-  const prompt = text + ", sticker, clean background, high detail";
-  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
-
-  img.src = url;
-  img.style.display = "block";
-
-  img.onload = () => status.innerText = "Done";
-}
-
-function toggleTools() {
-  const frame = document.getElementById("frame");
-
-  toolsOpen = !toolsOpen;
-
-  if (toolsOpen) {
-    frame.style.display = "block";
-
-    // TRY iframe load
-    frame.src = "https://perchance.org/ai-text-to-image-generator";
-
-    // fallback safety (if iframe breaks)
-    setTimeout(() => {
-      if (!frame.contentDocument) {
-        window.open(frame.src, "_blank");
-      }
-    }, 1500);
-
-  } else {
-    frame.style.display = "none";
-    frame.src = "";
+  for (let i = 0; i < 3; i++) {
+    success = await tryGenerate(text, i);
+    if (success) break;
   }
 }
+
 </script>
 
 </body>
