@@ -18,7 +18,6 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-
     padding: 70px 12px 20px 12px;
   }
 
@@ -49,6 +48,7 @@
     border-radius: 18px;
     display: none;
     object-fit: cover;
+    background: #111;
   }
 
   #status {
@@ -56,14 +56,14 @@
     opacity: 0.7;
   }
 
+  /* Hidden iframe kept for app-view behavior */
   iframe {
-    width: 100%;
-    height: 55vh;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
     border: none;
-    border-radius: 12px;
-    margin-top: 12px;
-    display: none;
-    background: black;
   }
 </style>
 </head>
@@ -75,99 +75,131 @@
 <select id="style">
   <option value="cute sticker, soft lighting">Cute</option>
   <option value="anime style, bold outline">Anime</option>
-  <option value="3d render, glossy, high detail">3D</option>
+  <option value="3d render, glossy">3D</option>
   <option value="graffiti street art">Graffiti</option>
   <option value="minimal flat icon">Minimal</option>
 </select>
 
 <button onclick="generate()">Generate</button>
-<button onclick="toggleTool()">Toggle Tool</button>
 
 <div id="status"></div>
 
 <img id="img">
 
-<iframe id="frame" src="https://perchance.org/ai-text-to-image-generator"></iframe>
+<!-- Hidden iframe retained -->
+<iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
 
 <script>
 
 let isGenerating = false;
 
-function setStatus(t) {
-  const el = document.getElementById("status");
-  if (el) el.innerText = t;
+function setStatus(text) {
+  document.getElementById("status").innerText = text;
 }
 
 function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function buildUrl(prompt) {
+  return "https://image.pollinations.ai/prompt/" +
+    encodeURIComponent(prompt);
+}
+
+async function loadImage(url) {
+  return new Promise((resolve) => {
+
+    const imgLoader = new Image();
+
+    let finished = false;
+
+    const timeout = setTimeout(() => {
+      if (!finished) {
+        finished = true;
+        resolve(false);
+      }
+    }, 15000);
+
+    imgLoader.onload = () => {
+      if (finished) return;
+
+      finished = true;
+      clearTimeout(timeout);
+
+      resolve(true);
+    };
+
+    imgLoader.onerror = () => {
+      if (finished) return;
+
+      finished = true;
+      clearTimeout(timeout);
+
+      resolve(false);
+    };
+
+    imgLoader.src = url;
+  });
 }
 
 async function generate() {
-  if (isGenerating) return;
 
-  const text = document.getElementById("text").value.trim();
-  const style = document.getElementById("style").value;
-  const img = document.getElementById("img");
-
-  if (!text) return;
-
-  isGenerating = true;
-  setStatus("Generating...");
-
-  await sleep(250); // prevents iOS race crash
-
-  const prompt = `${text}, ${style}, sticker, high detail, ${Date.now()}`;
-  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
-
-  let done = false;
-
-  const timeout = setTimeout(() => {
-    if (!done) {
-      setStatus("Still generating... (AI is slow)");
-    }
-  }, 9000);
-
-  const test = new Image();
-
-  test.onload = () => {
-    done = true;
-    clearTimeout(timeout);
-
-    img.src = url;
-    img.style.display = "block";
-
-    setStatus("Done");
-    isGenerating = false;
-  };
-
-  test.onerror = async () => {
-    await sleep(1200);
-
-    if (!done) {
-      setStatus("Retrying...");
-
-      const retryUrl =
-        "https://image.pollinations.ai/prompt/" +
-        encodeURIComponent(prompt + " high quality");
-
-      img.src = retryUrl;
-    }
-
-    isGenerating = false;
-  };
-
-  test.src = url;
-}
-
-function toggleTool() {
-  const frame = document.getElementById("frame");
-
-  if (frame.style.display === "block") {
-    frame.style.display = "none";
+  if (isGenerating) {
+    setStatus("Please wait...");
     return;
   }
 
-  frame.style.display = "block";
+  const text =
+    document.getElementById("text").value.trim();
+
+  if (!text) return;
+
+  const style =
+    document.getElementById("style").value;
+
+  const img =
+    document.getElementById("img");
+
+  isGenerating = true;
+
+  setStatus("Generating...");
+
+  // IMPORTANT:
+  // randomized prompt prevents CDN reuse
+  const basePrompt =
+    `${text}, ${style}, sticker, high detail`;
+
+  let success = false;
+
+  for (let i = 0; i < 3; i++) {
+
+    const uniquePrompt =
+      basePrompt + " " + Date.now() + " try" + i;
+
+    const url = buildUrl(uniquePrompt);
+
+    const loaded = await loadImage(url);
+
+    if (loaded) {
+
+      img.src = url;
+      img.style.display = "block";
+
+      setStatus("Done");
+
+      success = true;
+      break;
+    }
+
+    setStatus("Retrying...");
+    await sleep(1400);
+  }
+
+  if (!success) {
+    setStatus("AI is overloaded — try again");
+  }
+
+  isGenerating = false;
 }
 
 </script>
