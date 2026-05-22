@@ -95,6 +95,7 @@
 <script>
 
 let isGenerating = false;
+let currentBlobUrl = null;
 
 function setStatus(text) {
   document.getElementById("status").innerText = text;
@@ -127,72 +128,57 @@ async function generate() {
 
   setStatus("Generating...");
 
-  // IMPORTANT:
-  // fully reset image state first
-  img.style.display = "none";
-  img.removeAttribute("src");
+  try {
 
-  // force Safari repaint
-  void img.offsetHeight;
+    const prompt =
+      `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
 
-  const prompt =
-    `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
+    const url = buildUrl(prompt);
 
-  const url = buildUrl(prompt);
-
-  const loader = new Image();
-
-  let finished = false;
-
-  const timeout = setTimeout(() => {
-
-    if (!finished) {
-
-      finished = true;
-
-      setStatus("AI slow — try again");
-
-      isGenerating = false;
+    // cleanup old blob URL
+    if (currentBlobUrl) {
+      URL.revokeObjectURL(currentBlobUrl);
+      currentBlobUrl = null;
     }
 
-  }, 25000);
-
-  loader.onload = () => {
-
-    if (finished) return;
-
-    finished = true;
-
-    clearTimeout(timeout);
-
     // IMPORTANT:
-    // delay prevents Safari stale repaint bug
-    requestAnimationFrame(() => {
-
-      img.src = url;
-
-      img.style.display = "block";
-
-      setStatus("Done");
-
-      isGenerating = false;
+    // fetch image as blob
+    const response = await fetch(url, {
+      cache: "no-store"
     });
-  };
 
-  loader.onerror = () => {
+    if (!response.ok) {
+      throw new Error("Fetch failed");
+    }
 
-    if (finished) return;
+    const blob = await response.blob();
 
-    finished = true;
+    const blobUrl =
+      URL.createObjectURL(blob);
 
-    clearTimeout(timeout);
+    currentBlobUrl = blobUrl;
 
-    setStatus("Generation failed");
+    // force full reset
+    img.style.display = "none";
+    img.removeAttribute("src");
 
-    isGenerating = false;
-  };
+    void img.offsetHeight;
 
-  loader.src = url;
+    img.src = blobUrl;
+
+    img.style.display = "block";
+
+    setStatus("Done");
+
+  } catch (e) {
+
+    console.error(e);
+
+    setStatus("Generation failed — retry");
+
+  }
+
+  isGenerating = false;
 }
 
 </script>
