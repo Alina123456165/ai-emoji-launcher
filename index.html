@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 
-<title>Sticker App</title>
+<title>Sticker Generator</title>
 
 <style>
   body {
@@ -52,10 +52,6 @@
     cursor: pointer;
   }
 
-  .active {
-    background: #ffcc00;
-  }
-
   #img {
     width: 280px;
     height: 280px;
@@ -94,24 +90,23 @@
 
 <h1>Sticker Generator</h1>
 
-<input id="text" placeholder="type: fire cat, cool skull, cute dog">
+<input id="text" placeholder="type: fire cat, cute dog, skull">
 
 <div class="row">
   <button onclick="setStyle('cute')">Cute</button>
   <button onclick="setStyle('anime')">Anime</button>
   <button onclick="setStyle('graffiti')">Graffiti</button>
-  <button onclick="setStyle('3d')" >3D</button>
+  <button onclick="setStyle('3d')">3D</button>
 </div>
 
-<button onclick="generate()">Generate Sticker</button>
+<div class="row">
+  <button onclick="generate()">Generate Sticker</button>
+  <button onclick="downloadImage()">Download</button>
+</div>
 
 <div id="status"></div>
 
 <img id="img">
-
-<div class="row">
-  <button onclick="downloadImage()">Download</button>
-</div>
 
 <div class="gallery" id="gallery"></div>
 
@@ -120,13 +115,10 @@ let style = "cute";
 
 function setStyle(s) {
   style = s;
-
-  document.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-  event.target.classList.add("active");
 }
 
 function buildPrompt(text) {
-  return `${text}, ${style} sticker, centered, clean background, high detail, die-cut sticker, sharp edges`;
+  return `${text}, ${style} sticker, centered, clean background, high detail, die-cut sticker style`;
 }
 
 function generate() {
@@ -136,10 +128,9 @@ function generate() {
   const status = document.getElementById("status");
   const img = document.getElementById("img");
 
-  status.innerText = "Generating sticker...";
+  status.innerText = "Generating...";
 
   const prompt = buildPrompt(text);
-
   const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 
   img.src = url;
@@ -147,7 +138,6 @@ function generate() {
 
   img.onload = () => {
     status.innerText = "Done";
-
     saveToGallery(url);
   };
 }
@@ -183,40 +173,6 @@ function downloadImage() {
 }
 
 renderGallery();
-</script>
-
-</body>
-</html>
-
-<body>
-
-<h1>Text → Sticker Image Generator</h1>
-
-<input id="text" placeholder="type something like: fire cat sticker">
-
-<button onclick="generate()">Generate Sticker</button>
-
-<img id="img">
-
-<div class="hint">
-  Free AI image generation • no login • uses public API
-</div>
-
-<script>
-function generate() {
-  const text = document.getElementById("text").value;
-  const img = document.getElementById("img");
-
-  if (!text) return;
-
-  // Pollinations AI (free image generator)
-  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(
-    text + ", cute sticker, centered, clean background, high quality, digital sticker style"
-  );
-
-  img.src = url;
-  img.style.display = "block";
-}
 </script>
 
 </body>
