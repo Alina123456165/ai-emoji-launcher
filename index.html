@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>AI Sticker Pro</title>
+<title>AI Sticker Generator Pro</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -76,7 +76,7 @@
   <option value="minimal flat icon">Minimal</option>
 </select>
 
-<button onclick="generate()">Generate</button>
+<button onclick="enqueueGenerate()">Generate</button>
 
 <div id="status"></div>
 
@@ -84,7 +84,8 @@
 
 <script>
 
-let isGenerating = false;
+let queue = [];
+let isProcessing = false;
 let lastBlobUrl = null;
 
 function setStatus(t) {
@@ -96,23 +97,39 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-// adds variation so retries are NOT identical
 function makePrompt(text, style, attempt) {
-
-  const modifiers = [
-    "ultra detailed",
-    "high quality",
-    "sharp focus",
-    "sticker style",
-    "clean background"
+  const mods = [
+    "ultra detailed sticker",
+    "clean background",
+    "high quality render",
+    "sharp focus illustration",
+    "smooth lighting"
   ];
 
-  const mod = modifiers[Math.floor(Math.random() * modifiers.length)];
+  const mod = mods[Math.floor(Math.random() * mods.length)];
 
   return `${text}, ${style}, ${mod}, attempt ${attempt}, ${Date.now()}`;
 }
 
-async function fetchImage(url, timeout = 12000) {
+function enqueueGenerate() {
+
+  const text = document.getElementById("text").value.trim();
+  const style = document.getElementById("style").value;
+
+  if (!text) return;
+
+  queue.push({ text, style });
+
+  if (!isProcessing) {
+    processQueue();
+  }
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function fetchImage(url, timeout = 14000) {
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -140,17 +157,18 @@ async function fetchImage(url, timeout = 12000) {
   }
 }
 
-async function generate() {
+async function processQueue() {
 
-  if (isGenerating) return;
+  if (queue.length === 0) {
+    isProcessing = false;
+    return;
+  }
 
-  const text = document.getElementById("text").value.trim();
-  const style = document.getElementById("style").value;
+  isProcessing = true;
+
+  const { text, style } = queue.shift();
+
   const img = document.getElementById("img");
-
-  if (!text) return;
-
-  isGenerating = true;
 
   setStatus("Generating...");
 
@@ -160,7 +178,7 @@ async function generate() {
 
     try {
 
-      setStatus(attempt === 0 ? "Generating..." : "Retrying...");
+      await sleep(800); // anti-overload buffer
 
       const prompt = makePrompt(text, style, attempt);
       const url = buildUrl(prompt);
@@ -180,17 +198,17 @@ async function generate() {
       break;
 
     } catch (e) {
-
-      await new Promise(r => setTimeout(r, 600));
-
+      await sleep(1000); // backoff
     }
   }
 
   if (!success) {
-    setStatus("AI overloaded — try again");
+    setStatus("Failed — retrying queue...");
   }
 
-  isGenerating = false;
+  await sleep(1200); // cooldown between generations
+
+  processQueue(); // move to next request automatically
 }
 
 </script>
