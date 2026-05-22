@@ -53,7 +53,8 @@
     border-radius: 18px;
     object-fit: cover;
     background: #111;
-    transition: opacity 0.2s ease;
+    display: none;
+    transition: opacity 0.15s ease;
   }
 
   #status {
@@ -95,10 +96,6 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
-
 async function generate() {
 
   if (isGenerating) return;
@@ -113,6 +110,9 @@ async function generate() {
 
   setStatus("Generating...");
 
+  // keep old image visible until new one arrives
+  img.style.opacity = "0.5";
+
   const prompt =
     `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
 
@@ -120,49 +120,31 @@ async function generate() {
 
   try {
 
-    // 🔥 preload first
-    const test = new Image();
+    const res = await fetch(url, { cache: "no-store" });
 
-    const loaded = await new Promise((resolve) => {
+    if (!res.ok) throw new Error("bad response");
 
-      let done = false;
+    const blob = await res.blob();
 
-      test.onload = () => {
-        if (done) return;
-        done = true;
-        resolve(true);
-      };
+    if (blob.size < 1500) throw new Error("invalid image");
 
-      test.onerror = () => {
-        if (done) return;
-        done = true;
-        resolve(false);
-      };
+    const blobUrl = URL.createObjectURL(blob);
 
-      test.src = url;
-    });
-
-    if (!loaded) {
-      setStatus("Retrying...");
-      isGenerating = false;
-      return;
-    }
-
-    // small delay prevents iOS flicker bugs
-    await sleep(80);
-
-    img.src = url;
+    img.src = blobUrl;
     img.style.display = "block";
     img.style.opacity = "1";
 
     setStatus("Done");
 
-    // prefetch next silently
-    const next = buildUrl(prompt + " variation");
-    new Image().src = next;
+    // quick prefetch (doesn't block anything)
+    new Image().src = buildUrl(prompt + " variation");
 
   } catch (e) {
-    setStatus("Error — try again");
+
+    console.log(e);
+
+    setStatus("Retrying...");
+
   }
 
   isGenerating = false;
