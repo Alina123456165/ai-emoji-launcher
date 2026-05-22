@@ -20,7 +20,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 70px 12px 20px 12px;
+    padding: 70px 12px 20px;
   }
 
   input, select {
@@ -86,6 +86,7 @@
 <script>
 
 let isGenerating = false;
+let lastUrl = "";
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -94,6 +95,36 @@ function setStatus(t) {
 function buildUrl(prompt) {
   return "https://image.pollinations.ai/prompt/" +
     encodeURIComponent(prompt);
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function fetchWithTimeout(url, timeout = 12000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal
+    });
+
+    clearTimeout(id);
+
+    if (!res.ok) throw new Error("bad response");
+
+    const blob = await res.blob();
+
+    if (blob.size < 1500) throw new Error("invalid image");
+
+    return URL.createObjectURL(blob);
+
+  } catch (e) {
+    clearTimeout(id);
+    throw e;
+  }
 }
 
 async function generate() {
@@ -107,44 +138,44 @@ async function generate() {
   if (!text) return;
 
   isGenerating = true;
-
   setStatus("Generating...");
-
-  // keep old image visible until new one arrives
-  img.style.opacity = "0.5";
 
   const prompt =
     `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
 
   const url = buildUrl(prompt);
 
-  try {
+  let success = false;
 
-    const res = await fetch(url, { cache: "no-store" });
+  for (let i = 0; i < 2; i++) {
 
-    if (!res.ok) throw new Error("bad response");
+    try {
 
-    const blob = await res.blob();
+      setStatus(i === 0 ? "Generating..." : "Retrying...");
 
-    if (blob.size < 1500) throw new Error("invalid image");
+      const blobUrl = await fetchWithTimeout(url);
 
-    const blobUrl = URL.createObjectURL(blob);
+      // cleanup old blob
+      if (lastUrl) URL.revokeObjectURL(lastUrl);
 
-    img.src = blobUrl;
-    img.style.display = "block";
-    img.style.opacity = "1";
+      lastUrl = blobUrl;
 
-    setStatus("Done");
+      img.src = blobUrl;
+      img.style.display = "block";
+      img.style.opacity = "1";
 
-    // quick prefetch (doesn't block anything)
-    new Image().src = buildUrl(prompt + " variation");
+      setStatus("Done");
 
-  } catch (e) {
+      success = true;
+      break;
 
-    console.log(e);
+    } catch (e) {
+      await sleep(400);
+    }
+  }
 
-    setStatus("Retrying...");
-
+  if (!success) {
+    setStatus("Failed — try again");
   }
 
   isGenerating = false;
