@@ -85,8 +85,6 @@
 <script>
 
 let isGenerating = false;
-let lastPrompt = "";
-let lastUrl = "";
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -97,12 +95,8 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-function showInstantLoading(img) {
-  img.style.opacity = "0.4";
-}
-
-function showDone(img) {
-  img.style.opacity = "1";
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
 }
 
 async function generate() {
@@ -117,9 +111,6 @@ async function generate() {
 
   isGenerating = true;
 
-  // KEEP OLD IMAGE VISIBLE (no flicker)
-  showInstantLoading(img);
-
   setStatus("Generating...");
 
   const prompt =
@@ -127,57 +118,54 @@ async function generate() {
 
   const url = buildUrl(prompt);
 
-  lastPrompt = prompt;
-  lastUrl = url;
+  try {
 
-  // PRELOAD IN BACKGROUND (does not block UI)
-  const loader = new Image();
+    // 🔥 preload first
+    const test = new Image();
 
-  let finished = false;
+    const loaded = await new Promise((resolve) => {
 
-  const timeout = setTimeout(() => {
-    if (!finished) {
-      setStatus("Still generating...");
+      let done = false;
+
+      test.onload = () => {
+        if (done) return;
+        done = true;
+        resolve(true);
+      };
+
+      test.onerror = () => {
+        if (done) return;
+        done = true;
+        resolve(false);
+      };
+
+      test.src = url;
+    });
+
+    if (!loaded) {
+      setStatus("Retrying...");
+      isGenerating = false;
+      return;
     }
-  }, 12000);
 
-  loader.onload = () => {
-    if (finished) return;
-    finished = true;
-    clearTimeout(timeout);
+    // small delay prevents iOS flicker bugs
+    await sleep(80);
 
-    // swap instantly when ready
     img.src = url;
-    showDone(img);
+    img.style.display = "block";
+    img.style.opacity = "1";
 
     setStatus("Done");
 
-    isGenerating = false;
+    // prefetch next silently
+    const next = buildUrl(prompt + " variation");
+    new Image().src = next;
 
-    // 🔥 background prefetch next variation (SPEED BOOST)
-    prefetchNext(text, style);
-  };
+  } catch (e) {
+    setStatus("Error — try again");
+  }
 
-  loader.onerror = () => {
-    if (finished) return;
-    finished = true;
-    clearTimeout(timeout);
-
-    setStatus("Retrying...");
-    isGenerating = false;
-  };
-
-  loader.src = url;
-}
-
-function prefetchNext(text, style) {
-  const nextPrompt =
-    `${text}, ${style}, sticker, high detail variation ${Date.now()}`;
-
-  const nextUrl = buildUrl(nextPrompt);
-
-  const img = new Image();
-  img.src = nextUrl;
+  isGenerating = false;
 }
 
 </script>
