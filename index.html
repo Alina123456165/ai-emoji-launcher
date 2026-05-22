@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>AI Sticker App</title>
+<title>AI Sticker Pro</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -53,7 +53,6 @@
     border-radius: 18px;
     object-fit: cover;
     background: #111;
-    display: none;
     transition: opacity 0.15s ease;
   }
 
@@ -86,7 +85,7 @@
 <script>
 
 let isGenerating = false;
-let lastUrl = "";
+let lastBlobUrl = null;
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -97,15 +96,29 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
+// adds variation so retries are NOT identical
+function makePrompt(text, style, attempt) {
+
+  const modifiers = [
+    "ultra detailed",
+    "high quality",
+    "sharp focus",
+    "sticker style",
+    "clean background"
+  ];
+
+  const mod = modifiers[Math.floor(Math.random() * modifiers.length)];
+
+  return `${text}, ${style}, ${mod}, attempt ${attempt}, ${Date.now()}`;
 }
 
-async function fetchWithTimeout(url, timeout = 12000) {
+async function fetchImage(url, timeout = 12000) {
+
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
+
     const res = await fetch(url, {
       cache: "no-store",
       signal: controller.signal
@@ -138,27 +151,24 @@ async function generate() {
   if (!text) return;
 
   isGenerating = true;
+
   setStatus("Generating...");
-
-  const prompt =
-    `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
-
-  const url = buildUrl(prompt);
 
   let success = false;
 
-  for (let i = 0; i < 2; i++) {
+  for (let attempt = 0; attempt < 3; attempt++) {
 
     try {
 
-      setStatus(i === 0 ? "Generating..." : "Retrying...");
+      setStatus(attempt === 0 ? "Generating..." : "Retrying...");
 
-      const blobUrl = await fetchWithTimeout(url);
+      const prompt = makePrompt(text, style, attempt);
+      const url = buildUrl(prompt);
 
-      // cleanup old blob
-      if (lastUrl) URL.revokeObjectURL(lastUrl);
+      const blobUrl = await fetchImage(url);
 
-      lastUrl = blobUrl;
+      if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
+      lastBlobUrl = blobUrl;
 
       img.src = blobUrl;
       img.style.display = "block";
@@ -170,12 +180,14 @@ async function generate() {
       break;
 
     } catch (e) {
-      await sleep(400);
+
+      await new Promise(r => setTimeout(r, 600));
+
     }
   }
 
   if (!success) {
-    setStatus("Failed — try again");
+    setStatus("AI overloaded — try again");
   }
 
   isGenerating = false;
