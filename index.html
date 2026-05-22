@@ -60,7 +60,7 @@
     min-height: 20px;
   }
 
-  /* hidden iframe keeps app-view behavior */
+  /* hidden iframe keeps app-view feel */
   iframe {
     position: absolute;
     width: 1px;
@@ -132,17 +132,15 @@ async function generate() {
 
   setStatus("Generating...");
 
-  // prevent browser cache reuse
   const prompt =
     `${text}, ${style}, sticker, high detail, ${Date.now()}`;
 
   const url = buildUrl(prompt);
 
-  // clear previous handlers
-  img.onload = null;
-  img.onerror = null;
-
   let finished = false;
+
+  // hidden loader image
+  const loader = new Image();
 
   const timeout = setTimeout(() => {
 
@@ -157,13 +155,16 @@ async function generate() {
 
   }, 20000);
 
-  img.onload = () => {
+  loader.onload = () => {
 
     if (finished) return;
 
     finished = true;
 
     clearTimeout(timeout);
+
+    // only update visible image after successful load
+    img.src = url;
 
     img.style.display = "block";
 
@@ -172,7 +173,7 @@ async function generate() {
     isGenerating = false;
   };
 
-  img.onerror = async () => {
+  loader.onerror = async () => {
 
     if (finished) return;
 
@@ -182,22 +183,23 @@ async function generate() {
 
     setStatus("Retrying...");
 
-    await sleep(1500);
+    await sleep(1200);
 
-    // retry once with modified prompt
-    const retryPrompt =
-      prompt + " detailed";
+    const retryUrl = buildUrl(
+      prompt + " detailed " + Math.random()
+    );
 
-    img.src = buildUrl(retryPrompt);
+    img.src = retryUrl;
+
+    img.style.display = "block";
 
     setStatus("Done");
 
     isGenerating = false;
   };
 
-  // IMPORTANT:
-  // only one request now
-  img.src = url;
+  // hidden loader performs actual fetch first
+  loader.src = url;
 }
 
 </script>
