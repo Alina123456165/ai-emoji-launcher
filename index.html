@@ -1,167 +1,280 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullscreen Emoji Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+        /* App Layout */
+        .app-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        /* Sidebar Controls */
+        .sidebar {
+            width: 380px;
+            background-color: #1e293b;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            border-right: 1px solid #334155;
+            overflow-y: auto;
+            z-index: 10;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 0.5rem;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+        .grid-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            max-height: 180px;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+        .option-btn {
+            background: none;
+            border: 2px solid transparent;
+            font-size: 1.75rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+        }
+        .option-btn:hover {
+            background-color: #334155;
+        }
+        .option-btn.active {
+            border-color: #38bdf8;
+            background-color: #0f172a;
+        }
+        input[type="color"] {
+            -webkit-appearance: none;
+            border: none;
+            width: 100%;
+            height: 40px;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            background: none;
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0.5rem; }
 
-<title>AI Sticker Generator</title>
+        .btn {
+            background-color: #38bdf8;
+            color: #0f172a;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        .btn:hover { background-color: #7dd3fc; }
+        .btn-secondary {
+            background-color: #475569;
+            color: #f8fafc;
+        }
+        .btn-secondary:hover { background-color: #64748b; }
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sticker AI">
-
-<style>
-  body {
-    margin: 0;
-    font-family: system-ui;
-    background: #0b0b0b;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 60px 12px;
-  }
-
-  input, select {
-    width: 100%;
-    max-width: 360px;
-    padding: 12px;
-    margin-top: 10px;
-    border-radius: 10px;
-    border: none;
-    background: #1a1a1a;
-    color: white;
-    font-size: 16px;
-  }
-
-  button {
-    width: 100%;
-    max-width: 360px;
-    margin-top: 10px;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: white;
-    color: black;
-    font-weight: 600;
-  }
-
-  #img {
-    width: 280px;
-    height: 280px;
-    margin-top: 15px;
-    border-radius: 18px;
-    object-fit: cover;
-    background: #111;
-    display: none;
-  }
-
-  #status {
-    margin-top: 10px;
-    opacity: 0.7;
-    min-height: 20px;
-  }
-</style>
+        /* Canvas Main Stage */
+        .stage {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0f172a;
+            position: relative;
+            padding: 2rem;
+        }
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-radius: 1rem;
+            overflow: hidden;
+            background: #1e293b;
+            line-height: 0;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 80vh;
+        }
+    </style>
 </head>
-
 <body>
 
-<input id="text" placeholder="type: fire cat, anime skull">
+    <div class="app-container">
+        <!-- Application Control Center -->
+        <div class="sidebar">
+            <div>
+                <h1>Emoji Generator</h1>
+                <p style="color: #64748b; font-size: 0.875rem;">Build custom mixed emojis instantly.</p>
+            </div>
 
-<select id="style">
-  <option value="cute sticker, soft lighting">Cute</option>
-  <option value="anime style, bold outline">Anime</option>
-  <option value="3d render, glossy">3D</option>
-  <option value="graffiti street art">Graffiti</option>
-  <option value="minimal flat icon">Minimal</option>
-</select>
+            <!-- Base Face Option -->
+            <div class="control-group">
+                <label>1. Base Contour</label>
+                <div class="grid-options" id="base-options"></div>
+            </div>
 
-<button onclick="generate()">Generate</button>
+            <!-- Eyes Option -->
+            <div class="control-group">
+                <label>2. Eye Expression</label>
+                <div class="grid-options" id="eyes-options"></div>
+            </div>
 
-<div id="status">Ready</div>
+            <!-- Mouth Option -->
+            <div class="control-group">
+                <label>3. Mouth / Emotion</label>
+                <div class="grid-options" id="mouth-options"></div>
+            </div>
 
-<img id="img">
+            <!-- Background Color Tint -->
+            <div class="control-group">
+                <label>Background Canvas Tone</label>
+                <input type="color" id="bg-color" value="#1e293b">
+            </div>
 
-<script>
+            <!-- Action Triggers -->
+            <button class="btn" id="download-btn">Export Custom Emoji (.png)</button>
+            <button class="btn btn-secondary" id="random-btn">Randomize Components</button>
+        </div>
 
-let locked = false;
-let lastTime = 0;
+        <!-- Live Presentation Window -->
+        <div class="stage">
+            <div class="canvas-container">
+                <canvas id="emojiCanvas" width="500" height="500"></canvas>
+            </div>
+        </div>
+    </div>
 
-function setStatus(t) {
-  document.getElementById("status").innerText = t;
-}
+    <script>
+        // Resource configurations
+        const bases = ['😀', '👽', '🤖', '🐱', '🐶', '👻', '🎃', '💩'];
+        const eyes = ['👀', '👁️', '🕶️', '😍', '😉', '😭', '😡', '😱'];
+        const mouths = ['👄', '👅', '😂', '🔥', '💖', '⭐', '☀️', '💨'];
 
-function buildUrl(prompt) {
-  return "https://image.pollinations.ai/prompt/" +
-    encodeURIComponent(prompt);
-}
+        // Selections state
+        let currentBase = bases[0];
+        let currentEyes = eyes[0];
+        let currentMouth = mouths[0];
 
-function sleep(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
+        const canvas = document.getElementById('emojiCanvas');
+        const ctx = canvas.getContext('2d');
 
-async function generate() {
+        // Initialize Option Grids
+        function initGrid(elementId, items, setterCallback) {
+            const container = document.getElementById(elementId);
+            items.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn ${index === 0 ? 'active' : ''}`;
+                btn.textContent = item;
+                btn.onclick = () => {
+                    container.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    setterCallback(item);
+                };
+                container.appendChild(btn);
+            });
+        }
 
-  if (locked) return;
+        // Layer Rendering Engine
+        function renderEmoji() {
+            const bgColor = document.getElementById('bg-color').value;
+            
+            // Clean Canvas and set solid background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const text = document.getElementById("text").value.trim();
-  const style = document.getElementById("style").value;
-  const img = document.getElementById("img");
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-  if (!text) return;
+            // Draw Base Contour Layer
+            ctx.font = '240px serif';
+            ctx.fillText(currentBase, canvas.width / 2, canvas.height / 2);
 
-  locked = true;
+            // Draw Upper Layer (Eyes)
+            ctx.font = '100px serif';
+            ctx.fillText(currentEyes, canvas.width / 2, (canvas.height / 2) - 30);
 
-  // 🔥 HARD GLOBAL COOLDOWN (THIS PREVENTS QUEUE FULL ERROR)
-  const now = Date.now();
-  const wait = 6500 - (now - lastTime);
-  if (wait > 0) {
-    await sleep(wait);
-  }
+            // Draw Lower Layer (Mouth)
+            ctx.font = '90px serif';
+            ctx.fillText(currentMouth, canvas.width / 2, (canvas.height / 2) + 70);
+        }
 
-  setStatus("Generating...");
+        // Automatic Randomizer
+        function randomize() {
+            currentBase = bases[Math.floor(Math.random() * bases.length)];
+            currentEyes = eyes[Math.floor(Math.random() * eyes.length)];
+            currentMouth = mouths[Math.floor(Math.random() * mouths.length)];
 
-  const prompt =
-    `${text}, ${style}, sticker, high quality, clean background, ${Date.now()}`;
+            updateActiveClasses('base-options', currentBase);
+            updateActiveClasses('eyes-options', currentEyes);
+            updateActiveClasses('mouth-options', currentMouth);
+            renderEmoji();
+        }
 
-  const url = buildUrl(prompt);
+        function updateActiveClasses(containerId, activeText) {
+            const btns = document.getElementById(containerId).querySelectorAll('.option-btn');
+            btns.forEach(btn => {
+                if(btn.textContent === activeText) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
 
-  const test = new Image();
+        // File Exporter
+        document.getElementById('download-btn').addEventListener('click', () => {
+            const image = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'custom-emoji.png';
+            link.href = image;
+            link.click();
+        });
 
-  let done = false;
+        // Event hooks
+        document.getElementById('random-btn').addEventListener('click', randomize);
+        document.getElementById('bg-color').addEventListener('input', renderEmoji);
 
-  const timeout = setTimeout(() => {
-    if (!done) {
-      setStatus("AI slow — try again in a few seconds");
-      locked = false;
-    }
-  }, 15000);
+        // Bootstrap Core
+        initGrid('base-options', bases, (val) => { currentBase = val; renderEmoji(); });
+        initGrid('eyes-options', eyes, (val) => { currentEyes = val; renderEmoji(); });
+        initGrid('mouth-options', mouths, (val) => { currentMouth = val; renderEmoji(); });
 
-  test.onload = () => {
-    done = true;
-    clearTimeout(timeout);
-
-    img.src = url;
-    img.style.display = "block";
-
-    setStatus("Done");
-
-    lastTime = Date.now();
-    locked = false;
-  };
-
-  test.onerror = () => {
-    done = true;
-    clearTimeout(timeout);
-
-    setStatus("Queue full — wait a few seconds");
-    locked = false;
-  };
-
-  test.src = url;
-}
-
-</script>
-
+        // Initial paint run
+        renderEmoji();
+    </script>
 </body>
 </html>
+
