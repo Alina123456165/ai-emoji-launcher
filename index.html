@@ -2,12 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>AI Sticker Generator</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Stable AI Sticker Generator</title>
 
 <style>
   body {
@@ -30,18 +27,15 @@
     border: none;
     background: #1a1a1a;
     color: white;
-    font-size: 16px;
   }
 
   button {
     margin-top: 10px;
-    padding: 12px 16px;
+    padding: 12px;
     border-radius: 10px;
     border: none;
     background: white;
-    color: black;
-    font-weight: 600;
-    font-size: 16px;
+    font-weight: bold;
   }
 
   #img {
@@ -56,7 +50,6 @@
   #status {
     margin-top: 10px;
     opacity: 0.7;
-    min-height: 20px;
   }
 </style>
 </head>
@@ -87,20 +80,30 @@ function setStatus(t) {
   document.getElementById("status").innerText = t;
 }
 
-function buildUrl(prompt, seed) {
+function buildUrl(prompt) {
   return "https://image.pollinations.ai/prompt/" +
-    encodeURIComponent(prompt + " seed " + seed);
+    encodeURIComponent(prompt);
 }
 
-function makePrompt(text, style) {
-  return `${text}, ${style}, sticker, high detail`;
+function makePrompt(text, style, attempt) {
+  const mods = [
+    "high detail sticker",
+    "clean background",
+    "soft lighting",
+    "sharp illustration"
+  ];
+
+  const mod = mods[attempt % mods.length];
+
+  return `${text}, ${style}, ${mod}, variation ${attempt}, ${Date.now()}`;
 }
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function tryImage(url, timeout = 12000) {
+async function loadImage(url, timeout = 15000) {
+
   return new Promise((resolve, reject) => {
 
     const img = new Image();
@@ -131,36 +134,43 @@ async function generate() {
   if (!text) return;
 
   isGenerating = true;
+
   setStatus("Generating...");
 
-  const prompt = makePrompt(text, style);
+  let success = false;
 
-  let done = false;
+  // 🔥 SEQUENTIAL RETRIES (NO OVERLOAD)
+  for (let i = 0; i < 3; i++) {
 
-  // 🔥 PARALLEL REQUESTS (REAL FIX)
-  const attempts = [
-    tryImage(buildUrl(prompt, Math.random())),
-    tryImage(buildUrl(prompt, Math.random())),
-    tryImage(buildUrl(prompt, Math.random()))
-  ];
+    try {
 
-  Promise.any(attempts)
-    .then(url => {
-      if (done) return;
-      done = true;
+      const prompt = makePrompt(text, style, i);
+      const url = buildUrl(prompt);
 
-      img.src = url;
+      const result = await loadImage(url);
+
+      img.src = result;
       setStatus("Done");
-    })
-    .catch(() => {
-      setStatus("AI slow — try again");
-    })
-    .finally(() => {
-      isGenerating = false;
-    });
 
-  // 🔥 cooldown prevents overload spam
-  await sleep(1200);
+      success = true;
+      break;
+
+    } catch (e) {
+
+      setStatus("Retrying...");
+      await sleep(1200); // IMPORTANT cooldown
+
+    }
+  }
+
+  if (!success) {
+    setStatus("AI overloaded — wait a few seconds and try again");
+  }
+
+  // cooldown between full generations
+  await sleep(1500);
+
+  isGenerating = false;
 }
 
 </script>
