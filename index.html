@@ -60,7 +60,6 @@
     min-height: 20px;
   }
 
-  /* hidden iframe keeps app-view feel */
   iframe {
     position: absolute;
     width: 1px;
@@ -101,10 +100,6 @@ function setStatus(text) {
   document.getElementById("status").innerText = text;
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function buildUrl(prompt) {
   return "https://image.pollinations.ai/prompt/" +
     encodeURIComponent(prompt);
@@ -132,15 +127,22 @@ async function generate() {
 
   setStatus("Generating...");
 
+  // IMPORTANT:
+  // fully reset image state first
+  img.style.display = "none";
+  img.removeAttribute("src");
+
+  // force Safari repaint
+  void img.offsetHeight;
+
   const prompt =
-    `${text}, ${style}, sticker, high detail, ${Date.now()}`;
+    `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
 
   const url = buildUrl(prompt);
 
-  let finished = false;
-
-  // hidden loader image
   const loader = new Image();
+
+  let finished = false;
 
   const timeout = setTimeout(() => {
 
@@ -153,7 +155,7 @@ async function generate() {
       isGenerating = false;
     }
 
-  }, 20000);
+  }, 25000);
 
   loader.onload = () => {
 
@@ -163,17 +165,21 @@ async function generate() {
 
     clearTimeout(timeout);
 
-    // only update visible image after successful load
-    img.src = url;
+    // IMPORTANT:
+    // delay prevents Safari stale repaint bug
+    requestAnimationFrame(() => {
 
-    img.style.display = "block";
+      img.src = url;
 
-    setStatus("Done");
+      img.style.display = "block";
 
-    isGenerating = false;
+      setStatus("Done");
+
+      isGenerating = false;
+    });
   };
 
-  loader.onerror = async () => {
+  loader.onerror = () => {
 
     if (finished) return;
 
@@ -181,24 +187,11 @@ async function generate() {
 
     clearTimeout(timeout);
 
-    setStatus("Retrying...");
-
-    await sleep(1200);
-
-    const retryUrl = buildUrl(
-      prompt + " detailed " + Math.random()
-    );
-
-    img.src = retryUrl;
-
-    img.style.display = "block";
-
-    setStatus("Done");
+    setStatus("Generation failed");
 
     isGenerating = false;
   };
 
-  // hidden loader performs actual fetch first
   loader.src = url;
 }
 
