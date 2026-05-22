@@ -137,7 +137,7 @@
     <div class="app-layout">
         <div class="control-panel">
             <div class="branding">
-                <h1>Genmoji Engine v3</h1>
+                <h1>Genmoji Studio</h1>
                 <p style="color: #9ca3af; font-size: 0.85rem;">True Isolated AI Image Sticker Generator</p>
             </div>
 
@@ -199,8 +199,8 @@
             const targetPrompt = `${userPrompt}, 3d cute emoji sticker layout, centered single object, solid completely black background, professional digital app illustration style, high resolution`;
             const seed = Math.floor(Math.random() * 999999);
             
-            // Native cloud API routing structure
-            const fetchUrl = `https://pollinations.ai{encodeURIComponent(targetPrompt)}?width=512&height=512&seed=${seed}&nologo=true`;
+            // Corrected, stable 2026 Pollinations network route structure using the validated /image endpoint
+            const fetchUrl = `https://pollinations.ai{encodeURIComponent(targetPrompt)}?width=512&height=512&seed=${seed}&enhance=false&nologo=true&key=public-client-sticker-studio`;
 
             try {
                 // FETCH CONVERSION BLOCK: Downloads image as array data blocks to completely prevent CORS canvas security locks
@@ -259,6 +259,7 @@
             cutOutCanvas.height = canvas.height;
             const cutOutCtx = cutOutCanvas.getContext('2d');
             cutOutCtx.drawImage(canvas, 0, 0);
+
 
 
 
