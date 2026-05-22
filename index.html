@@ -1,58 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>AI Sticker App</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui;
+    background: #0b0b0b;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 70px 12px 20px 12px;
+  }
+
+  input, select {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    margin-top: 8px;
+    font-size: 16px;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: white;
+    color: black;
+    font-weight: 600;
+  }
+
+  #img {
+    width: 280px;
+    height: 280px;
+    margin-top: 12px;
+    border-radius: 18px;
+    display: none;
+    object-fit: cover;
+  }
+
+  #status {
+    margin-top: 10px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+
+<body>
+
+<input id="text" placeholder="type: fire cat, anime skull">
+
+<select id="style">
+  <option value="cute sticker, soft lighting">Cute</option>
+  <option value="anime style, bold outline">Anime</option>
+  <option value="3d render, glossy">3D</option>
+  <option value="graffiti street art">Graffiti</option>
+  <option value="minimal flat icon">Minimal</option>
+</select>
+
+<button onclick="generate()">Generate</button>
+
+<div id="status"></div>
+
+<img id="img">
+
 <script>
 
 let isGenerating = false;
 
 function setStatus(t) {
-  const el = document.getElementById("status");
-  if (el) el.innerText = t;
+  document.getElementById("status").innerText = t;
 }
 
 function generate() {
-  if (isGenerating) return; // 🔒 prevents back-to-back freeze
+  if (isGenerating) return;
 
-  const text = document.getElementById("text").value;
-  if (!text) return;
-
-  const style = document.getElementById("style").value;
+  const textEl = document.getElementById("text");
+  const styleEl = document.getElementById("style");
   const img = document.getElementById("img");
+
+  if (!textEl || !styleEl || !img) return;
+
+  const text = textEl.value.trim();
+  if (!text) return;
 
   isGenerating = true;
   setStatus("Generating...");
 
-  // 🔥 cache-bust so every request is unique
-  const prompt = `${text}, ${style}, sticker, high detail, ${Date.now()}`;
+  const prompt = `${text}, ${styleEl.value}, sticker, high detail, ${Date.now()}`;
 
-  const url =
-    "https://image.pollinations.ai/prompt/" +
-    encodeURIComponent(prompt);
-
-  let done = false;
-
-  const timeout = setTimeout(() => {
-    if (!done) {
-      setStatus("Slow response... retrying");
-      isGenerating = false;
-    }
-  }, 8000); // 8s safety reset
+  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 
   const test = new Image();
 
-  test.onload = () => {
-    done = true;
-    clearTimeout(timeout);
+  const timeout = setTimeout(() => {
+    setStatus("Slow response...");
+    isGenerating = false;
+  }, 8000);
 
+  test.onload = () => {
+    clearTimeout(timeout);
     img.src = url;
     img.style.display = "block";
-
     setStatus("Done");
     isGenerating = false;
   };
 
   test.onerror = () => {
-    done = true;
     clearTimeout(timeout);
-
-    setStatus("Retry failed — try again");
+    setStatus("Failed — retry");
     isGenerating = false;
   };
 
@@ -60,3 +128,6 @@ function generate() {
 }
 
 </script>
+
+</body>
+</html>
