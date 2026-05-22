@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Stable AI Sticker Generator</title>
+<title>AI Sticker Generator Stable</title>
 
 <style>
   body {
@@ -27,6 +27,7 @@
     border: none;
     background: #1a1a1a;
     color: white;
+    font-size: 16px;
   }
 
   button {
@@ -35,7 +36,9 @@
     border-radius: 10px;
     border: none;
     background: white;
-    font-weight: bold;
+    color: black;
+    font-weight: 600;
+    font-size: 16px;
   }
 
   #img {
@@ -45,11 +48,13 @@
     border-radius: 18px;
     object-fit: cover;
     background: #111;
+    display: none;
   }
 
   #status {
     margin-top: 10px;
     opacity: 0.7;
+    min-height: 20px;
   }
 </style>
 </head>
@@ -74,7 +79,9 @@
 
 <script>
 
-let isGenerating = false;
+let queue = [];
+let running = false;
+let lastRun = 0;
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -85,29 +92,24 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-function makePrompt(text, style, attempt) {
+function makePrompt(text, style, i) {
   const mods = [
-    "high detail sticker",
-    "clean background",
+    "clean sticker",
+    "high quality illustration",
     "soft lighting",
-    "sharp illustration"
+    "sharp detail"
   ];
-
-  const mod = mods[attempt % mods.length];
-
-  return `${text}, ${style}, ${mod}, variation ${attempt}, ${Date.now()}`;
+  return `${text}, ${style}, ${mods[i % mods.length]}, variation ${i}`;
 }
 
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function loadImage(url, timeout = 15000) {
-
+async function loadImage(url) {
   return new Promise((resolve, reject) => {
-
     const img = new Image();
-    const t = setTimeout(() => reject("timeout"), timeout);
+    const t = setTimeout(() => reject("timeout"), 15000);
 
     img.onload = () => {
       clearTimeout(t);
@@ -123,54 +125,68 @@ async function loadImage(url, timeout = 15000) {
   });
 }
 
-async function generate() {
-
-  if (isGenerating) return;
+function generate() {
 
   const text = document.getElementById("text").value.trim();
   const style = document.getElementById("style").value;
-  const img = document.getElementById("img");
 
   if (!text) return;
 
-  isGenerating = true;
+  queue.push({ text, style });
 
-  setStatus("Generating...");
+  if (!running) processQueue();
+}
 
-  let success = false;
+async function processQueue() {
 
-  // 🔥 SEQUENTIAL RETRIES (NO OVERLOAD)
-  for (let i = 0; i < 3; i++) {
+  running = true;
 
-    try {
+  const img = document.getElementById("img");
 
-      const prompt = makePrompt(text, style, i);
-      const url = buildUrl(prompt);
+  while (queue.length > 0) {
 
-      const result = await loadImage(url);
+    const now = Date.now();
 
-      img.src = result;
-      setStatus("Done");
+    // 🔥 hard cooldown to avoid AI overload
+    const wait = 2200 - (now - lastRun);
+    if (wait > 0) await sleep(wait);
 
-      success = true;
-      break;
+    const { text, style } = queue.shift();
 
-    } catch (e) {
+    setStatus("Generating...");
 
-      setStatus("Retrying...");
-      await sleep(1200); // IMPORTANT cooldown
+    let success = false;
 
+    for (let i = 0; i < 2; i++) {
+
+      try {
+
+        const prompt = makePrompt(text, style, i);
+        const url = buildUrl(prompt);
+
+        const result = await loadImage(url);
+
+        img.src = result;
+        img.style.display = "block";
+
+        setStatus("Done");
+
+        success = true;
+        break;
+
+      } catch (e) {
+        await sleep(800); // small backoff before retry
+      }
     }
+
+    if (!success) {
+      setStatus("AI overloaded — try again");
+    }
+
+    lastRun = Date.now();
   }
 
-  if (!success) {
-    setStatus("AI overloaded — wait a few seconds and try again");
-  }
-
-  // cooldown between full generations
-  await sleep(1500);
-
-  isGenerating = false;
+  running = false;
 }
 
 </script>
