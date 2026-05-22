@@ -9,7 +9,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-<!-- SPEED BOOST -->
 <link rel="preconnect" href="https://image.pollinations.ai">
 
 <style>
@@ -53,23 +52,14 @@
     margin-top: 14px;
     border-radius: 18px;
     object-fit: cover;
-    display: none;
     background: #111;
+    transition: opacity 0.2s ease;
   }
 
   #status {
     margin-top: 10px;
     opacity: 0.7;
     min-height: 20px;
-  }
-
-  iframe {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-    border: none;
   }
 </style>
 </head>
@@ -92,12 +82,11 @@
 
 <img id="img">
 
-<iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
-
 <script>
 
 let isGenerating = false;
-let currentBlobUrl = null;
+let lastPrompt = "";
+let lastUrl = "";
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -108,94 +97,87 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-async function fetchImage(url) {
-  const res = await fetch(url, { cache: "no-store" });
+function showInstantLoading(img) {
+  img.style.opacity = "0.4";
+}
 
-  if (!res.ok) throw new Error("bad response");
-
-  const blob = await res.blob();
-
-  // faster + less false rejections
-  if (blob.size < 1500) {
-    throw new Error("invalid image");
-  }
-
-  return blob;
+function showDone(img) {
+  img.style.opacity = "1";
 }
 
 async function generate() {
 
-  if (isGenerating) {
-    setStatus("Please wait...");
-    return;
-  }
+  if (isGenerating) return;
 
-  const text =
-    document.getElementById("text").value.trim();
+  const text = document.getElementById("text").value.trim();
+  const style = document.getElementById("style").value;
+  const img = document.getElementById("img");
 
   if (!text) return;
 
-  const style =
-    document.getElementById("style").value;
-
-  const img =
-    document.getElementById("img");
-
   isGenerating = true;
+
+  // KEEP OLD IMAGE VISIBLE (no flicker)
+  showInstantLoading(img);
 
   setStatus("Generating...");
 
   const prompt =
     `${text}, ${style}, sticker, high detail, ${Date.now()} ${Math.random()}`;
 
-  const urls = [
-    buildUrl(prompt),
-    buildUrl(prompt + " variation"),
-    buildUrl(prompt + " high quality")
-  ];
+  const url = buildUrl(prompt);
 
-  let success = false;
+  lastPrompt = prompt;
+  lastUrl = url;
 
-  for (const url of urls) {
+  // PRELOAD IN BACKGROUND (does not block UI)
+  const loader = new Image();
 
-    try {
+  let finished = false;
 
-      // 🔥 faster pacing
-      await new Promise(r => setTimeout(r, 120));
-
-      const blob = await fetchImage(url);
-
-      if (currentBlobUrl) {
-        URL.revokeObjectURL(currentBlobUrl);
-      }
-
-      const blobUrl = URL.createObjectURL(blob);
-
-      currentBlobUrl = blobUrl;
-
-      img.style.display = "none";
-      img.removeAttribute("src");
-
-      void img.offsetHeight;
-
-      img.src = blobUrl;
-      img.style.display = "block";
-
-      setStatus("Done");
-
-      success = true;
-      break;
-
-    } catch (e) {
-      // silently try next
+  const timeout = setTimeout(() => {
+    if (!finished) {
+      setStatus("Still generating...");
     }
-  }
+  }, 12000);
 
-  if (!success) {
-    setStatus("AI overloaded — try again");
-  }
+  loader.onload = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeout);
 
-  isGenerating = false;
+    // swap instantly when ready
+    img.src = url;
+    showDone(img);
+
+    setStatus("Done");
+
+    isGenerating = false;
+
+    // 🔥 background prefetch next variation (SPEED BOOST)
+    prefetchNext(text, style);
+  };
+
+  loader.onerror = () => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeout);
+
+    setStatus("Retrying...");
+    isGenerating = false;
+  };
+
+  loader.src = url;
+}
+
+function prefetchNext(text, style) {
+  const nextPrompt =
+    `${text}, ${style}, sticker, high detail variation ${Date.now()}`;
+
+  const nextUrl = buildUrl(nextPrompt);
+
+  const img = new Image();
+  img.src = nextUrl;
 }
 
 </script>
