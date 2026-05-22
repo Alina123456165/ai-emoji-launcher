@@ -4,89 +4,97 @@ let lastPrompt = "";
 let lastGoodImage = "";
 
 const styles = [
-  "cute sticker, clean background, soft lighting",
-  "anime sticker, sharp outline, vibrant colors",
-  "3d render sticker, ultra detailed, glossy",
-  "graffiti sticker, bold street art style",
-  "minimal icon sticker, flat design, centered"
+  "cute sticker, clean background",
+  "anime sticker, bold outline",
+  "3d glossy sticker render",
+  "graffiti street art sticker",
+  "minimal flat icon sticker"
 ];
 
-function randomStyle() {
+function pickStyle() {
   return styles[Math.floor(Math.random() * styles.length)];
 }
 
 function buildPrompt(text) {
-  return `${text}, ${randomStyle()}, high detail, sticker, centered composition`;
+  return `${text}, ${pickStyle()}, centered, high detail, sticker`;
 }
 
-function generateUrl(prompt) {
+function makeUrl(prompt) {
   return "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 }
 
-function loadImage(prompt, onSuccess, onFail) {
-  const img = document.getElementById("img");
-  const status = document.getElementById("status");
-
-  status.innerText = "Generating...";
-
-  const url = generateUrl(prompt);
-
-  const temp = new Image();
-
-  temp.onload = () => {
-    img.src = url;
-    img.style.display = "block";
-    lastGoodImage = url;
-
-    status.innerText = "Done";
-    save(url);
-
-    if (onSuccess) onSuccess();
-  };
-
-  temp.onerror = () => {
-    if (onFail) onFail();
-  };
-
-  temp.src = url;
+function setStatus(msg) {
+  const el = document.getElementById("status");
+  if (el) el.innerText = msg;
 }
 
-async function generate() {
-  const text = document.getElementById("text").value;
-  if (!text) return;
+function showImage(url) {
+  const img = document.getElementById("img");
+  if (!img) return;
 
-  lastPrompt = text;
+  img.src = url;
+  img.style.display = "block";
 
-  let attempts = 0;
+  lastGoodImage = url;
+  save(url);
+}
 
-  function tryNext() {
-    if (attempts >= 4) {
-      const status = document.getElementById("status");
+function generate() {
+  try {
+    const textEl = document.getElementById("text");
+    if (!textEl) return;
 
-      // fallback: show last good image instead of blank
-      if (lastGoodImage) {
-        document.getElementById("img").src = lastGoodImage;
-        document.getElementById("img").style.display = "block";
-        status.innerText = "Using last working image";
-      } else {
-        status.innerText = "All AI attempts failed";
-      }
+    const text = textEl.value.trim();
+    if (!text) return;
 
-      return;
-    }
+    lastPrompt = text;
 
-    attempts++;
+    setStatus("Generating...");
 
-    const prompt = buildPrompt(text + " variation " + Math.random());
+    const prompt = buildPrompt(text + " " + Math.random().toString(36).slice(2,6));
+    const url = makeUrl(prompt);
 
-    loadImage(
-      prompt,
-      () => {},
-      () => tryNext()
-    );
+    const testImg = new Image();
+
+    testImg.onload = () => {
+      showImage(url);
+      setStatus("Done");
+    };
+
+    testImg.onerror = () => {
+      setStatus("Retrying fallback...");
+      fallback(text);
+    };
+
+    testImg.src = url;
+
+  } catch (e) {
+    setStatus("Error recovered");
+    fallback(lastPrompt || "sticker");
   }
+}
 
-  tryNext();
+function fallback(text) {
+  const safePrompt = `${text}, simple sticker, clean design`;
+  const url = makeUrl(safePrompt);
+
+  const img = new Image();
+
+  img.onload = () => {
+    showImage(url);
+    setStatus("Fallback used");
+  };
+
+  img.onerror = () => {
+    if (lastGoodImage) {
+      showImage(lastGoodImage);
+      setStatus("Using cached image");
+    } else {
+      setStatus("Generation failed");
+    }
+  };
+
+  img.src = url;
 }
 
 function regenerate() {
@@ -95,25 +103,31 @@ function regenerate() {
 }
 
 function save(url) {
-  let data = JSON.parse(localStorage.getItem("stickers") || "[]");
-  data.unshift(url);
-  data = data.slice(0, 12);
-  localStorage.setItem("stickers", JSON.stringify(data));
-  render();
+  try {
+    let data = JSON.parse(localStorage.getItem("stickers") || "[]");
+    data.unshift(url);
+    data = data.slice(0, 10);
+    localStorage.setItem("stickers", JSON.stringify(data));
+    render();
+  } catch {}
 }
 
 function render() {
-  const data = JSON.parse(localStorage.getItem("stickers") || "[]");
-  const el = document.getElementById("gallery");
-  el.innerHTML = "";
+  try {
+    const data = JSON.parse(localStorage.getItem("stickers") || "[]");
+    const el = document.getElementById("gallery");
+    if (!el) return;
 
-  data.forEach(url => {
-    const img = document.createElement("img");
-    img.src = url;
-    el.appendChild(img);
-  });
+    el.innerHTML = "";
+
+    data.forEach(url => {
+      const img = document.createElement("img");
+      img.src = url;
+      el.appendChild(img);
+    });
+  } catch {}
 }
 
-render();
+window.addEventListener("load", render);
 
 </script>
