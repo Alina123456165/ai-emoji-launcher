@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stable AI Genmoji Studio</title>
-    <!-- Puter.js official free cloud orchestration script -->
-    <script src="https://puter.com"></script>
+    <title>AI Genmoji Sticker Studio</title>
     <style>
         * {
             box-sizing: border-box;
@@ -89,8 +87,18 @@
             text-align: center;
             min-height: 20px;
         }
+        .hints {
+            font-size: 0.75rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        .hints b {
+            color: #ff7e5f;
+            cursor: pointer;
+            text-decoration: underline;
+        }
         
-        /* Fullscreen Stage UI */
+        /* Fullscreen Stage UI Layout */
         .preview-stage {
             flex: 1;
             display: flex;
@@ -107,7 +115,7 @@
             display: none;
             cursor: pointer;
         }
-        /* Loader Spinner */
+        /* Loader Spinner Configuration */
         .spinner {
             width: 50px;
             height: 50px;
@@ -129,34 +137,42 @@
     <div class="app-layout">
         <div class="control-panel">
             <div class="branding">
-                <h1>Genmoji Engine v2</h1>
-                <p style="color: #9ca3af; font-size: 0.85rem;">Stable Multi-Generation Sticker App</p>
+                <h1>Genmoji Engine v3</h1>
+                <p style="color: #9ca3af; font-size: 0.85rem;">True Isolated AI Image Sticker Generator</p>
             </div>
 
-            <!-- Sticker Prompt Input -->
+            <!-- Input Box prompt form field -->
             <div class="input-group">
                 <label>What sticker do you want?</label>
-                <input type="text" id="prompt-input" value="candy" placeholder="e.g., candy, hamburger, laser wolf...">
+                <input type="text" id="prompt-input" value="candy" placeholder="Type a word...">
+                <p class="hints">
+                    Quick words: 
+                    <b onclick="quickFill('candy')">candy</b>, 
+                    <b onclick="quickFill('pizza')">pizza</b>, 
+                    <b onclick="quickFill('cute cat')">cat</b>, 
+                    <b onclick="quickFill('robot')">robot</b>, 
+                    <b onclick="quickFill('fire monster')">fire</b>
+                </p>
             </div>
 
-            <!-- Interactive Trigger Elements -->
+            <!-- Generate Button Interface elements -->
             <button class="gen-btn" id="generate-btn">Generate AI Sticker</button>
-            <div class="status-msg" id="status-text">Ready to generate.</div>
+            <div class="status-msg" id="status-text">Ready to run.</div>
 
             <p style="color: #6b7280; font-size: 0.75rem; margin-top: auto; line-height: 1.4;">
-                💡 <b>How to save:</b> Right-click or long-press directly on the final image sticker to copy or save it as a true transparent PNG file!
+                💡 <b>How to save:</b> Once generated, right-click or long-press directly on the final image preview to save it as a transparent PNG file.
             </p>
         </div>
 
-        <!-- Fullscreen Presentation Viewport Frame -->
+        <!-- Fullscreen Canvas Staging Presenter Grid -->
         <div class="preview-stage">
             <div class="spinner" id="loading-spinner"></div>
             <!-- The Native Right-Click Save Target -->
-            <img id="sticker-output" alt="Your Generated Transparent AI Sticker">
+            <img id="sticker-output" alt="Your Generated AI Sticker">
         </div>
     </div>
 
-    <!-- Background Layer Mask Processing Pipeline Canvas -->
+    <!-- Processing Pipeline Canvas Element -->
     <canvas id="hidden-canvas" width="512" height="512"></canvas>
 
     <script>
@@ -173,35 +189,43 @@
             const userPrompt = promptInput.value.trim();
             if (!userPrompt) return alert("Please type an object name!");
 
-            // Update loading UI states
+            // Update UI State layout elements
             generateBtn.disabled = true;
             spinner.style.display = "block";
             imgOutput.style.display = "none";
             statusText.textContent = "AI engine is drawing...";
 
-            // Direct engineering instruction ensuring flat items render over deep black walls
-            const structuredPrompt = `${userPrompt}, cute isolated 3D emoji sticker layout vector graphic, centered single object, solid completely black background, high resolution 3d asset style`;
+            // Constructing an optimized layout string to make the AI force object isolation over plain black backgrounds
+            const targetPrompt = `${userPrompt}, 3d cute emoji sticker layout, centered single object, solid completely black background, professional digital app illustration style, high resolution`;
+            const seed = Math.floor(Math.random() * 999999);
+            
+            // Native cloud API routing structure
+            const fetchUrl = `https://pollinations.ai{encodeURIComponent(targetPrompt)}?width=512&height=512&seed=${seed}&nologo=true`;
 
             try {
-                // Official cloud API execution - bypasses rate limits and scraping crashes
-                const imageResult = await puter.ai.txt2img(structuredPrompt);
+                // FETCH CONVERSION BLOCK: Downloads image as array data blocks to completely prevent CORS canvas security locks
+                const response = await fetch(fetchUrl);
+                if (!response.ok) throw new Error("Network generation error");
                 
-                const img = new Image();
-                img.crossOrigin = "anonymous"; // Keeps local canvas clean from origin locks
-                img.src = imageResult.src;
-
-                img.onload = function() {
-                    statusText.textContent = "Isolating background alpha and cutting vinyl strokes...";
-                    processStickerLayers(img);
-                };
-
-                img.onerror = function() {
-                    throw new Error("Local graphic streaming compilation failed.");
+                const blob = await response.blob();
+                
+                // Convert array blocks safely into internal browser memory Base64 lines
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = function () {
+                    const base64data = reader.result;
+                    
+                    const img = new Image();
+                    img.src = base64data;
+                    img.onload = function() {
+                        statusText.textContent = "Stripping black matrix background and cutting edges...";
+                        processStickerLayers(img);
+                    };
                 };
 
             } catch (error) {
                 console.error(error);
-                statusText.textContent = "Processing failed. Try hitting generate again.";
+                statusText.textContent = "Generation failed. Try re-clicking the generate button.";
                 generateBtn.disabled = false;
                 spinner.style.display = "none";
             }
@@ -210,56 +234,32 @@
         function processStickerLayers(aiImage) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // 1. Map raw image into background computing buffers
+            // 1. Draw raw AI asset matrix to canvas
             ctx.drawImage(aiImage, 0, 0, canvas.width, canvas.height);
             
             const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imgData.data;
 
-            // 2. CHROMA KEY PARSER: Wipe away black pixels to create true transparent channels
+            // 2. CHROMA KEY PARSER: Wipe away black pixels to render true transparent alpha space channels
             for (let i = 0; i < data.length; i += 4) {
                 let r = data[i];
                 let g = data[i + 1];
                 let b = data[i + 2];
                 
-                // If pixel color maps near dark thresholds, force alpha transparency to zero
-                if (r < 55 && g < 55 && b < 55) {
+                // If pixel color maps near dark background thresholds, purge alpha down to zero
+                if (r < 45 && g < 45 && b < 45) {
                     data[i + 3] = 0; 
                 }
             }
-            
             ctx.putImageData(imgData, 0, 0);
 
-            // Copy stripped asset array context out to a standalone masking clone layer
+            // Copy transparency isolated item layout out to a secondary offscreen mask canvas
             const cutOutCanvas = document.createElement('canvas');
             cutOutCanvas.width = canvas.width;
             cutOutCanvas.height = canvas.height;
             const cutOutCtx = cutOutCanvas.getContext('2d');
             cutOutCtx.drawImage(canvas, 0, 0);
 
-            // 3. VINYL DIE-CUT ENGINE: Stitches white outline frames around graphic boundaries
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
-            ctx.shadowBlur = 12;
-            ctx.shadowOffsetY = 6;
-
-            // Sweeps 360 degrees stamping white shadow profiles to construct a unified thick boundary line
-            const thickness = 14; 
-            for (let angle = 0; angle < 360; angle += 15) {
-                const dx = Math.cos(angle * Math.PI / 180) * thickness;
-                const dy = Math.sin(angle * Math.PI / 180) * thickness;
-                ctx.drawImage(cutOutCanvas, dx, dy);
-            }
-
-            // Locks global canvas pixels to flood-fill the background mask solid white
-            ctx.globalCompositeOperation = 'source-in';
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Revert composite rules back to default placement hierarchies
-            ctx.globalCompositeOperation = 'source-over';
-            ctx.shadowColor = 'transparent';
 
 
 
