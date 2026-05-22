@@ -2,60 +2,61 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>AI Sticker Generator Stable</title>
+<title>Sticker AI App</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sticker AI">
 
 <style>
-  body {
-    margin: 0;
-    font-family: system-ui;
-    background: #0b0b0b;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 70px 12px;
-  }
+body {
+  margin: 0;
+  font-family: system-ui;
+  background: #0b0b0b;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 70px 12px;
+}
 
-  input, select {
-    width: 100%;
-    max-width: 360px;
-    padding: 12px;
-    margin-top: 8px;
-    border-radius: 10px;
-    border: none;
-    background: #1a1a1a;
-    color: white;
-    font-size: 16px;
-  }
+input, select {
+  width: 100%;
+  max-width: 360px;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 10px;
+  border: none;
+  background: #1a1a1a;
+  color: white;
+  font-size: 16px;
+}
 
-  button {
-    margin-top: 10px;
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: white;
-    color: black;
-    font-weight: 600;
-    font-size: 16px;
-  }
+button {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: white;
+  color: black;
+  font-weight: 600;
+}
 
-  #img {
-    width: 280px;
-    height: 280px;
-    margin-top: 14px;
-    border-radius: 18px;
-    object-fit: cover;
-    background: #111;
-    display: none;
-  }
+#img {
+  width: 280px;
+  height: 280px;
+  margin-top: 14px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: #111;
+}
 
-  #status {
-    margin-top: 10px;
-    opacity: 0.7;
-    min-height: 20px;
-  }
+#status {
+  margin-top: 10px;
+  opacity: 0.7;
+}
 </style>
 </head>
 
@@ -64,11 +65,11 @@
 <input id="text" placeholder="type: fire cat, anime skull">
 
 <select id="style">
-  <option value="cute sticker, soft lighting">Cute</option>
-  <option value="anime style, bold outline">Anime</option>
-  <option value="3d render, glossy">3D</option>
-  <option value="graffiti street art">Graffiti</option>
-  <option value="minimal flat icon">Minimal</option>
+  <option value="cute sticker">Cute</option>
+  <option value="anime style">Anime</option>
+  <option value="3d render">3D</option>
+  <option value="graffiti style">Graffiti</option>
+  <option value="minimal icon">Minimal</option>
 </select>
 
 <button onclick="generate()">Generate</button>
@@ -79,9 +80,8 @@
 
 <script>
 
-let queue = [];
-let running = false;
 let lastRun = 0;
+let locked = false;
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -92,101 +92,65 @@ function buildUrl(prompt) {
     encodeURIComponent(prompt);
 }
 
-function makePrompt(text, style, i) {
-  const mods = [
-    "clean sticker",
-    "high quality illustration",
-    "soft lighting",
-    "sharp detail"
-  ];
-  return `${text}, ${style}, ${mods[i % mods.length]}, variation ${i}`;
-}
-
 function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-async function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const t = setTimeout(() => reject("timeout"), 15000);
+async function generate() {
 
-    img.onload = () => {
-      clearTimeout(t);
-      resolve(url);
-    };
-
-    img.onerror = () => {
-      clearTimeout(t);
-      reject("fail");
-    };
-
-    img.src = url;
-  });
-}
-
-function generate() {
+  if (locked) return;
 
   const text = document.getElementById("text").value.trim();
   const style = document.getElementById("style").value;
+  const img = document.getElementById("img");
 
   if (!text) return;
 
-  queue.push({ text, style });
+  locked = true;
 
-  if (!running) processQueue();
-}
+  // 🔥 cooldown prevents overload spam
+  const now = Date.now();
+  const wait = 2000 - (now - lastRun);
+  if (wait > 0) await sleep(wait);
 
-async function processQueue() {
+  setStatus("Generating...");
 
-  running = true;
+  const prompt =
+    `${text}, ${style}, sticker, high detail, ${Date.now()}`;
 
-  const img = document.getElementById("img");
+  const url = buildUrl(prompt);
 
-  while (queue.length > 0) {
+  const tempImg = new Image();
 
-    const now = Date.now();
+  let done = false;
 
-    // 🔥 hard cooldown to avoid AI overload
-    const wait = 2200 - (now - lastRun);
-    if (wait > 0) await sleep(wait);
-
-    const { text, style } = queue.shift();
-
-    setStatus("Generating...");
-
-    let success = false;
-
-    for (let i = 0; i < 2; i++) {
-
-      try {
-
-        const prompt = makePrompt(text, style, i);
-        const url = buildUrl(prompt);
-
-        const result = await loadImage(url);
-
-        img.src = result;
-        img.style.display = "block";
-
-        setStatus("Done");
-
-        success = true;
-        break;
-
-      } catch (e) {
-        await sleep(800); // small backoff before retry
-      }
+  const timeout = setTimeout(() => {
+    if (!done) {
+      setStatus("AI slow — try again");
+      locked = false;
     }
+  }, 14000);
 
-    if (!success) {
-      setStatus("AI overloaded — try again");
-    }
+  tempImg.onload = () => {
+    done = true;
+    clearTimeout(timeout);
+
+    img.src = url;
+    setStatus("Done");
 
     lastRun = Date.now();
-  }
+    locked = false;
+  };
 
-  running = false;
+  tempImg.onerror = () => {
+    done = true;
+    clearTimeout(timeout);
+
+    setStatus("Failed — try again");
+    locked = false;
+  };
+
+  tempImg.src = url;
 }
 
 </script>
