@@ -1,11 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>AI Sticker App</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui;
+    background: #0b0b0b;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  input {
+    width: 100%;
+    max-width: 360px;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    font-size: 16px;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: white;
+    color: black;
+    font-weight: 600;
+  }
+
+  #img {
+    width: 280px;
+    height: 280px;
+    margin-top: 14px;
+    border-radius: 22px;
+    display: none;
+    object-fit: cover;
+  }
+
+  #status {
+    margin-top: 10px;
+    opacity: 0.7;
+  }
+
+  .gallery {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    overflow-x: auto;
+    max-width: 360px;
+  }
+
+  .gallery img {
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+  }
+</style>
+</head>
+
+<body>
+
+<input id="text" placeholder="type: fire cat, skull, anime dog">
+
+<button onclick="generate()">Generate</button>
+<button onclick="regenerate()">Regenerate</button>
+
+<div id="status"></div>
+
+<img id="img">
+
+<div class="gallery" id="gallery"></div>
+
 <script>
 
 let lastPrompt = "";
 let lastGoodImage = "";
 
 const styles = [
-  "cute sticker, clean background",
-  "anime sticker, bold outline",
+  "cute sticker clean",
+  "anime bold outline sticker",
   "3d glossy sticker render",
   "graffiti street art sticker",
   "minimal flat icon sticker"
@@ -19,82 +104,76 @@ function buildPrompt(text) {
   return `${text}, ${pickStyle()}, centered, high detail, sticker`;
 }
 
-function makeUrl(prompt) {
+function url(prompt) {
   return "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 }
 
-function setStatus(msg) {
+function setStatus(t) {
   const el = document.getElementById("status");
-  if (el) el.innerText = msg;
+  if (el) el.innerText = t;
 }
 
-function showImage(url) {
+function show(imgUrl) {
   const img = document.getElementById("img");
-  if (!img) return;
-
-  img.src = url;
+  img.src = imgUrl;
   img.style.display = "block";
-
-  lastGoodImage = url;
-  save(url);
+  lastGoodImage = imgUrl;
+  save(imgUrl);
 }
 
 function generate() {
   try {
-    const textEl = document.getElementById("text");
-    if (!textEl) return;
-
-    const text = textEl.value.trim();
+    const input = document.getElementById("text");
+    const text = input.value.trim();
     if (!text) return;
 
     lastPrompt = text;
 
     setStatus("Generating...");
 
-    const prompt = buildPrompt(text + " " + Math.random().toString(36).slice(2,6));
-    const url = makeUrl(prompt);
+    const prompt = buildPrompt(text + " " + Math.random());
+    const imgUrl = url(prompt);
 
-    const testImg = new Image();
+    const test = new Image();
 
-    testImg.onload = () => {
-      showImage(url);
+    test.onload = () => {
+      show(imgUrl);
       setStatus("Done");
     };
 
-    testImg.onerror = () => {
-      setStatus("Retrying fallback...");
+    test.onerror = () => {
+      setStatus("Fallback...");
       fallback(text);
     };
 
-    testImg.src = url;
+    test.src = imgUrl;
 
   } catch (e) {
-    setStatus("Error recovered");
-    fallback(lastPrompt || "sticker");
+    setStatus("Recovered error");
   }
 }
 
 function fallback(text) {
-  const safePrompt = `${text}, simple sticker, clean design`;
-  const url = makeUrl(safePrompt);
+  const prompt = `${text}, simple sticker`;
+  const imgUrl = url(prompt);
 
   const img = new Image();
 
   img.onload = () => {
-    showImage(url);
+    show(imgUrl);
     setStatus("Fallback used");
   };
 
   img.onerror = () => {
     if (lastGoodImage) {
-      showImage(lastGoodImage);
-      setStatus("Using cached image");
+      show(lastGoodImage);
+      setStatus("Cached image used");
     } else {
-      setStatus("Generation failed");
+      setStatus("Failed");
     }
   };
 
-  img.src = url;
+  img.src = imgUrl;
 }
 
 function regenerate() {
@@ -116,14 +195,12 @@ function render() {
   try {
     const data = JSON.parse(localStorage.getItem("stickers") || "[]");
     const el = document.getElementById("gallery");
-    if (!el) return;
-
     el.innerHTML = "";
 
-    data.forEach(url => {
-      const img = document.createElement("img");
-      img.src = url;
-      el.appendChild(img);
+    data.forEach(u => {
+      const i = document.createElement("img");
+      i.src = u;
+      el.appendChild(i);
     });
   } catch {}
 }
@@ -131,3 +208,6 @@ function render() {
 window.addEventListener("load", render);
 
 </script>
+
+</body>
+</html>
