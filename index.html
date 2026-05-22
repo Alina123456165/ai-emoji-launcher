@@ -1,147 +1,119 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-<title>Sticker AI (Multi-Fallback)</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<style>
-  body {
-    margin: 0;
-    font-family: system-ui;
-    background: #0b0b0b;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
-  }
-
-  h1 {
-    font-size: 18px;
-  }
-
-  input {
-    width: 100%;
-    max-width: 360px;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    font-size: 16px;
-    margin-top: 10px;
-  }
-
-  button {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: none;
-    background: white;
-    color: black;
-    font-weight: 600;
-    margin: 6px;
-  }
-
-  #img {
-    width: 280px;
-    height: 280px;
-    border-radius: 22px;
-    margin-top: 14px;
-    display: none;
-    object-fit: cover;
-  }
-
-  #status {
-    margin-top: 10px;
-    opacity: 0.7;
-    font-size: 13px;
-    text-align: center;
-  }
-</style>
-</head>
-
-<body>
-
-<h1>Multi-AI Sticker Generator</h1>
-
-<input id="text" placeholder="type: fire cat, anime skull, neon dog">
-
-<div>
-  <button onclick="generate()">Generate</button>
-</div>
-
-<div id="status"></div>
-
-<img id="img">
-
 <script>
 
-const endpoints = [
-  "https://image.pollinations.ai/prompt/",
-  "https://image.pollinations.ai/prompt/"
+let lastPrompt = "";
+let lastGoodImage = "";
+
+const styles = [
+  "cute sticker, clean background, soft lighting",
+  "anime sticker, sharp outline, vibrant colors",
+  "3d render sticker, ultra detailed, glossy",
+  "graffiti sticker, bold street art style",
+  "minimal icon sticker, flat design, centered"
 ];
 
-function buildPrompt(text, attempt) {
-  let style = "sticker, clean background, high detail, centered";
-
-  // change prompt slightly per fallback attempt
-  if (attempt === 1) style += ", ultra sharp";
-  if (attempt === 2) style += ", cartoon style";
-  if (attempt === 3) style += ", 3d render style";
-
-  return `${text}, ${style}`;
+function randomStyle() {
+  return styles[Math.floor(Math.random() * styles.length)];
 }
 
-async function tryGenerate(text, attempt = 0) {
-  const status = document.getElementById("status");
+function buildPrompt(text) {
+  return `${text}, ${randomStyle()}, high detail, sticker, centered composition`;
+}
+
+function generateUrl(prompt) {
+  return "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
+}
+
+function loadImage(prompt, onSuccess, onFail) {
   const img = document.getElementById("img");
+  const status = document.getElementById("status");
 
-  if (attempt >= endpoints.length + 2) {
-    status.innerText = "All AI sources failed. Try again.";
-    return;
-  }
+  status.innerText = "Generating...";
 
-  const prompt = buildPrompt(text, attempt);
+  const url = generateUrl(prompt);
 
-  const url = endpoints[0] + encodeURIComponent(prompt);
+  const temp = new Image();
 
-  status.innerText = "Generating (AI " + (attempt + 1) + ")...";
+  temp.onload = () => {
+    img.src = url;
+    img.style.display = "block";
+    lastGoodImage = url;
 
-  return new Promise((resolve) => {
-    const tempImg = new Image();
+    status.innerText = "Done";
+    save(url);
 
-    tempImg.onload = () => {
-      img.src = url;
-      img.style.display = "block";
-      status.innerText = "Done (AI " + (attempt + 1) + ")";
-      resolve(true);
-    };
+    if (onSuccess) onSuccess();
+  };
 
-    tempImg.onerror = () => {
-      status.innerText = "AI " + (attempt + 1) + " failed... retrying";
-      resolve(false);
-    };
+  temp.onerror = () => {
+    if (onFail) onFail();
+  };
 
-    tempImg.src = url;
-  });
+  temp.src = url;
 }
 
 async function generate() {
   const text = document.getElementById("text").value;
   if (!text) return;
 
-  let success = false;
+  lastPrompt = text;
 
-  for (let i = 0; i < 3; i++) {
-    success = await tryGenerate(text, i);
-    if (success) break;
+  let attempts = 0;
+
+  function tryNext() {
+    if (attempts >= 4) {
+      const status = document.getElementById("status");
+
+      // fallback: show last good image instead of blank
+      if (lastGoodImage) {
+        document.getElementById("img").src = lastGoodImage;
+        document.getElementById("img").style.display = "block";
+        status.innerText = "Using last working image";
+      } else {
+        status.innerText = "All AI attempts failed";
+      }
+
+      return;
+    }
+
+    attempts++;
+
+    const prompt = buildPrompt(text + " variation " + Math.random());
+
+    loadImage(
+      prompt,
+      () => {},
+      () => tryNext()
+    );
   }
+
+  tryNext();
 }
 
-</script>
+function regenerate() {
+  if (!lastPrompt) return;
+  generate();
+}
 
-</body>
-</html>
+function save(url) {
+  let data = JSON.parse(localStorage.getItem("stickers") || "[]");
+  data.unshift(url);
+  data = data.slice(0, 12);
+  localStorage.setItem("stickers", JSON.stringify(data));
+  render();
+}
+
+function render() {
+  const data = JSON.parse(localStorage.getItem("stickers") || "[]");
+  const el = document.getElementById("gallery");
+  el.innerHTML = "";
+
+  data.forEach(url => {
+    const img = document.createElement("img");
+    img.src = url;
+    el.appendChild(img);
+  });
+}
+
+render();
+
+</script>
