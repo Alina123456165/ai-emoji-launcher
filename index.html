@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Genmoji Sticker Generator</title>
+    <title>Genmoji AI Text-to-Sticker Studio</title>
     <style>
         * {
             box-sizing: border-box;
@@ -64,44 +64,19 @@
         input[type="text"]:focus {
             border-color: #feb47b;
         }
-        .emoji-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 0.5rem;
-            background: #1f2937;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
+        .hints {
+            font-size: 0.75rem;
+            color: #6b7280;
+            line-height: 1.5;
         }
-        .emoji-btn {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
+        .hints b {
+            color: #ff7e5f;
             cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 0.25rem;
+            text-decoration: underline;
         }
-        .emoji-btn:hover {
-            background-color: #374151;
-        }
-        .color-pickers {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
-        }
-        .color-node {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: #1f2937;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-        }
-        input[type="color"] {
-            width: 32px;
-            height: 32px;
-            border: none;
-            cursor: pointer;
-            background: none;
+        .border-slider {
+            width: 100%;
+            accent-color: #feb47b;
         }
         .export-btn {
             background: linear-gradient(135deg, #ff7e5f, #feb47b);
@@ -114,7 +89,7 @@
             cursor: pointer;
             margin-top: auto;
         }
-        .export-btn:hover { opacity: 0.9 stroke; }
+        .export-btn:hover { opacity: 0.9; }
         
         /* Fullscreen Stage */
         .preview-stage {
@@ -125,11 +100,10 @@
             background-image: radial-gradient(#1f2937 1px, transparent 1px);
             background-size: 20px 20px;
         }
-        /* Crucial: Keeping image sharp and click-saveable */
         #sticker-output {
-            max-width: 80vw;
-            max-height: 80vh;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+            max-width: 75vw;
+            max-height: 75vh;
+            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
             cursor: pointer;
         }
         #hidden-canvas {
@@ -142,59 +116,47 @@
     <div class="app-layout">
         <div class="control-panel">
             <div class="branding">
-                <h1>Genmoji Maker</h1>
-                <p style="color: #9ca3af; font-size: 0.85rem;">Right-click image to save instantly</p>
+                <h1>Genmoji Studio</h1>
+                <p style="color: #9ca3af; font-size: 0.85rem;">Converts typed concepts into graphic stickers.</p>
             </div>
 
-            <!-- Text Input -->
+            <!-- Text Prompt Input -->
             <div class="input-group">
-                <label>Sticker Text</label>
-                <input type="text" id="sticker-text" value="OMG!" placeholder="Type here...">
+                <label>Type an Object Name</label>
+                <input type="text" id="sticker-text" value="candy" placeholder="Type an item name...">
+                <p class="hints">
+                    Try typing keywords: <br>
+                    <b onclick="applyWord('candy')">candy</b>, 
+                    <b onclick="applyWord('cat')">cat</b>, 
+                    <b onclick="applyWord('pizza')">pizza</b>, 
+                    <b onclick="applyWord('ghost')">ghost</b>, 
+                    <b onclick="applyWord('alien')">alien</b>, 
+                    <b onclick="applyWord('fire')">fire</b>, 
+                    <b onclick="applyWord('rocket')">rocket</b>, 
+                    <b onclick="applyWord('heart')">heart</b>, 
+                    <b onclick="applyWord('robot')">robot</b>,
+                    <b onclick="applyWord('dinosaur')">dinosaur</b>
+                </p>
             </div>
 
-            <!-- Quick Emoji Adders -->
+            <!-- Sticker Contour Control -->
             <div class="input-group">
-                <label>Tap to Add Emoji</label>
-                <div class="emoji-grid">
-                    <button class="emoji-btn" onclick="addEmoji('🔥')">🔥</button>
-                    <button class="emoji-btn" onclick="addEmoji('✨')">✨</button>
-                    <button class="emoji-btn" onclick="addEmoji('💀')">💀</button>
-                    <button class="emoji-btn" onclick="addEmoji('👑')">👑</button>
-                    <button class="emoji-btn" onclick="addEmoji('💯')">💯</button>
-                    <button class="emoji-btn" onclick="addEmoji('🚀')">🚀</button>
-                    <button class="emoji-btn" onclick="addEmoji('💖')">💖</button>
-                    <button class="emoji-btn" onclick="addEmoji('👽')">👽</button>
-                    <button class="emoji-btn" onclick="addEmoji('✌️')">✌️</button>
-                    <button class="emoji-btn" onclick="addEmoji('🎨')">🎨</button>
-                </div>
+                <label>White Border Thickness</label>
+                <input type="range" id="border-slider" class="border-slider" min="15" max="50" value="30">
             </div>
 
-            <!-- Gradient Customizer -->
-            <div class="input-group">
-                <label>Text Gradient</label>
-                <div class="color-pickers">
-                    <div class="color-node">
-                        <input type="color" id="color1" value="#ff007f">
-                    </div>
-                    <div class="color-node">
-                        <input type="color" id="color2" value="#ffaa00">
-                    </div>
-                </div>
-            </div>
-
-            <!-- Download Button Trigger -->
-            <button class="export-btn" id="download-btn">Save Transparent PNG</button>
+            <!-- Save Action Button -->
+            <button class="export-btn" id="download-btn">Save Transparent Sticker</button>
         </div>
 
-        <!-- Right Side: Clean Presenter Element -->
+        <!-- Presentation Viewport (Right-Clickable / Hold to Copy) -->
         <div class="preview-stage">
-            <!-- This is a real <img> tag. You can right click -> Save Image As directly! -->
-            <img id="sticker-output" alt="Your generated Genmoji sticker">
+            <img id="sticker-output" alt="Generated Genmoji Visual Element">
         </div>
     </div>
 
-    <!-- Hidden calculation engine -->
-    <canvas id="hidden-canvas" width="800" height="800"></canvas>
+    <!-- Hidden Pixel Renderer Engine -->
+    <canvas id="hidden-canvas" width="600" height="600"></canvas>
 
     <script>
         const canvas = document.getElementById('hidden-canvas');
@@ -202,69 +164,121 @@
         const imgOutput = document.getElementById('sticker-output');
         
         const textInput = document.getElementById('sticker-text');
-        const color1Input = document.getElementById('color1');
-        const color2Input = document.getElementById('color2');
+        const borderSlider = document.getElementById('border-slider');
 
-        function generateSticker() {
-            const text = textInput.value || " ";
+        // Extended Keyword Dictionary to translate words into actual high-res graphics
+        const dictionary = {
+            'candy': '🍬',
+            'sweets': '🍭',
+            'cat': '🐱',
+            'dog': '🐶',
+            'pizza': '🍕',
+            'burger': '🍔',
+            'fire': '🔥',
+            'ghost': '👻',
+            'alien': '👽',
+            'heart': '💖',
+            'rocket': '🚀',
+            'star': '⭐',
+            'robot': '🤖',
+            'icecream': '🍦',
+            'donut': '🍩',
+            'skull': '💀',
+            'dinosaur': '🦖',
+            'dragon': '🐉',
+            'clover': '🍀',
+            'beer': '🍺',
+            'coffee': '☕',
+            'car': '🚗',
+            'party': '🥳',
+            'poop': '💩'
+        };
+
+        function generateVisualSticker() {
+            const rawInput = textInput.value.toLowerCase().trim();
+            const borderSize = parseInt(borderSlider.value);
             
-            // Clear to pure transparency
+            let visualCharacter = ''; 
+
+            // Logic matching state
+            if (dictionary[rawInput]) {
+                // If it is in our keyword dictionary, extract the graphic icon matching the word
+                visualCharacter = dictionary[rawInput];
+            } else if (/\p{Emoji}/u.test(rawInput)) {
+                // If they input a raw emoji glyph directly, preserve it 
+                visualCharacter = rawInput; 
+            } else if (rawInput.length === 0) {
+                visualCharacter = '✨';
+            } else {
+                // Generates dynamic character text string layout only if no match found
+                visualCharacter = rawInput; 
+            }
+
+            // Flush canvas alpha channel pipeline
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dynamically scale text size based on length
-            let fontSize = 160;
-            if (text.length > 4) fontSize = 120;
-            if (text.length > 8) fontSize = 80;
-
-            ctx.font = `italic 900 ${fontSize}px system-ui, -apple-system, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
             const x = canvas.width / 2;
             const y = canvas.height / 2;
 
-            // Step 1: Draw thick white sticker contour background border
+            // Is checking if formatting needs custom text tracking or default emoji grid sizes
+            const isWord = visualCharacter.length > 2; 
+            let fontSize = isWord ? 80 : 320;
+
+            // Fluid long word handling constraints
+            if (isWord && visualCharacter.length > 6) fontSize = 55;
+            if (isWord && visualCharacter.length > 10) fontSize = 40;
+
+            // Set up core typographic layout rules
+            ctx.font = isWord ? `italic 900 ${fontSize}px system-ui, -apple-system, sans-serif` : `${fontSize}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // --- LAYER 1: Drop Shadow Foundation Boundary ---
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetY = 6;
+
+            // --- LAYER 2: High Contrast Vector Border Outline ---
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 36;
+            ctx.lineWidth = borderSize * 2;
             ctx.lineJoin = 'round';
-            ctx.miterLimit = 2;
-            ctx.strokeText(text, x, y);
+            ctx.lineCap = 'round';
+            ctx.strokeText(visualCharacter, x, y);
 
-            // Step 2: Overlay a clean, sharp inner text gradient layout
-            const gradient = ctx.createLinearGradient(x - 200, y - 100, x + 200, y + 100);
-            gradient.addColorStop(0, color1Input.value);
-            gradient.addColorStop(1, color2Input.value);
-            
-            ctx.fillStyle = gradient;
-            ctx.fillText(text, x, y);
+            // Strip active shadow filters to clear structural layer bleeding
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.strokeText(visualCharacter, x, y); // Double trace path to fill internal vector gaps
 
-            // Step 3: Convert canvas to live saving source inside <img> tag
-            const dataUrl = canvas.toDataURL('image/png');
-            imgOutput.src = dataUrl;
+            // --- LAYER 3: Core Image Asset Vector Layer ---
+            if (isWord) {
+                // Custom gradient treatment style specifically applied if string outputs text fallback words
+                const gradient = ctx.createLinearGradient(x - 150, y - 50, x + 150, y + 50);
+                gradient.addColorStop(0, '#ff7e5f');
+                gradient.addColorStop(1, '#feb47b');
+                ctx.fillStyle = gradient;
+                ctx.fillText(visualCharacter, x, y);
+            } else {
+                // Render pure graphic data profile directly 
+                ctx.fillStyle = '#000000';
+                ctx.fillText(visualCharacter, x, y);
+            }
+
+            // Convert background vector frames instantly into native click-save image elements
+            imgOutput.src = canvas.toDataURL('image/png');
         }
 
-        function addEmoji(emoji) {
-            textInput.value += emoji;
-            generateSticker();
+        // Helper interface click handler
+        function applyWord(word) {
+            textInput.value = word;
+            generateVisualSticker();
         }
 
-        // Live Event Listeners
-        textInput.addEventListener('input', generateSticker);
-        color1Input.addEventListener('input', generateSticker);
-        color2Input.addEventListener('input', generateSticker);
+        // Interactive Application State Hooks
+        textInput.addEventListener('input', generateVisualSticker);
+        borderSlider.addEventListener('input', generateVisualSticker);
 
-        // Native Downloader Hook
-        document.getElementById('download-btn').addEventListener('click', () => {
-            const link = document.createElement('a');
-            link.download = 'genmoji-sticker.png';
-            link.href = imgOutput.src;
-            link.click();
-        });
 
-        // Initial Boot Render
-        generateSticker();
-    </script>
-</body>
-</html>
 
 
