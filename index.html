@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>Sticker AI</title>
+<title>AI Sticker Generator</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,42 +19,47 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 50px 12px;
+    padding: 60px 12px;
   }
 
-  input, select, button {
+  input, select {
+    width: 100%;
+    max-width: 360px;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: none;
+    background: #1a1a1a;
+    color: white;
+    font-size: 16px;
+  }
+
+  button {
     width: 100%;
     max-width: 360px;
     margin-top: 10px;
     padding: 12px;
     border-radius: 10px;
     border: none;
-    font-size: 16px;
-  }
-
-  input, select {
-    background: #1a1a1a;
-    color: white;
-  }
-
-  button {
     background: white;
     color: black;
     font-weight: 600;
   }
 
+  #img {
+    width: 280px;
+    height: 280px;
+    margin-top: 15px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: #111;
+    display: none;
+  }
+
   #status {
     margin-top: 10px;
     opacity: 0.7;
-  }
-
-  iframe {
-    margin-top: 15px;
-    width: 320px;
-    height: 320px;
-    border-radius: 18px;
-    border: none;
-    background: #111;
+    min-height: 20px;
   }
 </style>
 </head>
@@ -75,7 +80,7 @@
 
 <div id="status">Ready</div>
 
-<iframe id="frame"></iframe>
+<img id="img">
 
 <script>
 
@@ -101,16 +106,18 @@ async function generate() {
 
   const text = document.getElementById("text").value.trim();
   const style = document.getElementById("style").value;
-  const frame = document.getElementById("frame");
+  const img = document.getElementById("img");
 
   if (!text) return;
 
   locked = true;
 
-  // 🔥 cooldown prevents overload spam
+  // 🔥 HARD GLOBAL COOLDOWN (THIS PREVENTS QUEUE FULL ERROR)
   const now = Date.now();
-  const wait = 3000 - (now - lastTime);
-  if (wait > 0) await sleep(wait);
+  const wait = 6500 - (now - lastTime);
+  if (wait > 0) {
+    await sleep(wait);
+  }
 
   setStatus("Generating...");
 
@@ -119,27 +126,39 @@ async function generate() {
 
   const url = buildUrl(prompt);
 
-  // 🔥 iframe load (this is your requested setup)
-  frame.src = url;
+  const test = new Image();
 
   let done = false;
 
   const timeout = setTimeout(() => {
     if (!done) {
-      setStatus("AI slow — try again");
+      setStatus("AI slow — try again in a few seconds");
       locked = false;
     }
   }, 15000);
 
-  frame.onload = () => {
+  test.onload = () => {
     done = true;
     clearTimeout(timeout);
 
+    img.src = url;
+    img.style.display = "block";
+
     setStatus("Done");
+
     lastTime = Date.now();
     locked = false;
   };
 
+  test.onerror = () => {
+    done = true;
+    clearTimeout(timeout);
+
+    setStatus("Queue full — wait a few seconds");
+    locked = false;
+  };
+
+  test.src = url;
 }
 
 </script>
