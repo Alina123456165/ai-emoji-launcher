@@ -4,59 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>Sticker AI App</title>
+<title>Sticker AI</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sticker AI">
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui;
-  background: #0b0b0b;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 70px 12px;
-}
+  body {
+    margin: 0;
+    font-family: system-ui;
+    background: #0b0b0b;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 12px;
+  }
 
-input, select {
-  width: 100%;
-  max-width: 360px;
-  padding: 12px;
-  margin-top: 8px;
-  border-radius: 10px;
-  border: none;
-  background: #1a1a1a;
-  color: white;
-  font-size: 16px;
-}
+  input, select, button {
+    width: 100%;
+    max-width: 360px;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    font-size: 16px;
+  }
 
-button {
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: white;
-  color: black;
-  font-weight: 600;
-}
+  input, select {
+    background: #1a1a1a;
+    color: white;
+  }
 
-#img {
-  width: 280px;
-  height: 280px;
-  margin-top: 14px;
-  border-radius: 18px;
-  object-fit: cover;
-  background: #111;
-}
+  button {
+    background: white;
+    color: black;
+    font-weight: 600;
+  }
 
-#status {
-  margin-top: 10px;
-  opacity: 0.7;
-}
+  #status {
+    margin-top: 10px;
+    opacity: 0.7;
+  }
+
+  iframe {
+    margin-top: 15px;
+    width: 320px;
+    height: 320px;
+    border-radius: 18px;
+    border: none;
+    background: #111;
+  }
 </style>
 </head>
 
@@ -65,23 +64,23 @@ button {
 <input id="text" placeholder="type: fire cat, anime skull">
 
 <select id="style">
-  <option value="cute sticker">Cute</option>
-  <option value="anime style">Anime</option>
-  <option value="3d render">3D</option>
-  <option value="graffiti style">Graffiti</option>
-  <option value="minimal icon">Minimal</option>
+  <option value="cute sticker, soft lighting">Cute</option>
+  <option value="anime style, bold outline">Anime</option>
+  <option value="3d render, glossy">3D</option>
+  <option value="graffiti street art">Graffiti</option>
+  <option value="minimal flat icon">Minimal</option>
 </select>
 
 <button onclick="generate()">Generate</button>
 
-<div id="status"></div>
+<div id="status">Ready</div>
 
-<img id="img">
+<iframe id="frame"></iframe>
 
 <script>
 
-let lastRun = 0;
 let locked = false;
+let lastTime = 0;
 
 function setStatus(t) {
   document.getElementById("status").innerText = t;
@@ -102,7 +101,7 @@ async function generate() {
 
   const text = document.getElementById("text").value.trim();
   const style = document.getElementById("style").value;
-  const img = document.getElementById("img");
+  const frame = document.getElementById("frame");
 
   if (!text) return;
 
@@ -110,17 +109,18 @@ async function generate() {
 
   // 🔥 cooldown prevents overload spam
   const now = Date.now();
-  const wait = 2000 - (now - lastRun);
+  const wait = 3000 - (now - lastTime);
   if (wait > 0) await sleep(wait);
 
   setStatus("Generating...");
 
   const prompt =
-    `${text}, ${style}, sticker, high detail, ${Date.now()}`;
+    `${text}, ${style}, sticker, high quality, clean background, ${Date.now()}`;
 
   const url = buildUrl(prompt);
 
-  const tempImg = new Image();
+  // 🔥 iframe load (this is your requested setup)
+  frame.src = url;
 
   let done = false;
 
@@ -129,28 +129,17 @@ async function generate() {
       setStatus("AI slow — try again");
       locked = false;
     }
-  }, 14000);
+  }, 15000);
 
-  tempImg.onload = () => {
+  frame.onload = () => {
     done = true;
     clearTimeout(timeout);
 
-    img.src = url;
     setStatus("Done");
-
-    lastRun = Date.now();
+    lastTime = Date.now();
     locked = false;
   };
 
-  tempImg.onerror = () => {
-    done = true;
-    clearTimeout(timeout);
-
-    setStatus("Failed — try again");
-    locked = false;
-  };
-
-  tempImg.src = url;
 }
 
 </script>
