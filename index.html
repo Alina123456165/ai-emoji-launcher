@@ -1,120 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-  <title>AI Emoji Maker</title>
-
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0f0f0f">
+  <title>Emoji App</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      background: #0f0f0f;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      color: white;
       overflow: hidden;
+      background: #000;
     }
 
-    .container {
+    iframe {
+      width: 100%;
       height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-    }
-
-    .logo {
-      width: 90px;
-      height: 90px;
-      border-radius: 24px;
-      background: linear-gradient(135deg, #ffcc00, #ff6600);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 42px;
-      margin-bottom: 24px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 700;
-    }
-
-    p {
-      opacity: 0.7;
-      margin-top: 10px;
-      margin-bottom: 30px;
-      line-height: 1.4;
-    }
-
-    button {
       border: none;
-      background: white;
-      color: black;
-      padding: 16px 28px;
-      border-radius: 16px;
-      font-size: 17px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.2s ease;
-    }
-
-    button:active {
-      transform: scale(0.96);
-    }
-
-    .footer {
-      position: absolute;
-      bottom: 20px;
-      opacity: 0.4;
-      font-size: 12px;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="container">
-
-    <div class="logo">
-      😀
-    </div>
-
-    <h1>AI Emoji Maker</h1>
-
-    <p>
-      Launch AI Emoji Maker in app mode.
-    </p>
-
-    <button onclick="launchApp()">
-      Open App
-    </button>
-
-    <div class="footer">
-      Add to Home Screen for full app feel
-    </div>
-
-  </div>
-
-  <script>
-    function launchApp() {
-      window.location.href = "https://aiemojimaker.com";
-    }
-  </script>
+  <iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
 
 </body>
 </html>
