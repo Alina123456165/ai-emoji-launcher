@@ -2,14 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-<title>Sticker Generator</title>
+<title>Sticker App + Tools</title>
 
-<!-- iOS APP MODE FIX -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Sticker App">
 
 <style>
   body {
@@ -20,13 +18,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 18px;
-    min-height: 100vh;
+    padding: 16px;
   }
 
   h1 {
-    font-size: 20px;
-    margin: 10px 0 14px;
+    font-size: 18px;
   }
 
   input {
@@ -36,7 +32,41 @@
     border-radius: 12px;
     border: none;
     font-size: 16px;
-    outline: none;
+    margin-top: 10px;
+  }
+
+  button {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: white;
+    color: black;
+    font-weight: 600;
+    margin: 6px;
+  }
+
+  #img {
+    width: 280px;
+    height: 280px;
+    border-radius: 22px;
+    margin-top: 14px;
+    display: none;
+    object-fit: cover;
+  }
+
+  #status {
+    margin-top: 10px;
+    opacity: 0.6;
+  }
+
+  iframe {
+    width: 100%;
+    height: 60vh;
+    border: none;
+    border-radius: 12px;
+    margin-top: 12px;
+    display: none;
+    background: black;
   }
 
   .row {
@@ -44,49 +74,6 @@
     gap: 8px;
     flex-wrap: wrap;
     justify-content: center;
-    margin: 10px 0;
-  }
-
-  button {
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: none;
-    background: #fff;
-    color: #000;
-    font-weight: 600;
-    cursor: pointer;
-  }
-
-  #img {
-    width: 280px;
-    height: 280px;
-    border-radius: 22px;
-    margin-top: 16px;
-    display: none;
-    object-fit: cover;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-  }
-
-  #status {
-    margin-top: 10px;
-    opacity: 0.6;
-    font-size: 13px;
-  }
-
-  .gallery {
-    margin-top: 18px;
-    width: 100%;
-    max-width: 360px;
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-  }
-
-  .gallery img {
-    width: 70px;
-    height: 70px;
-    border-radius: 12px;
-    object-fit: cover;
   }
 </style>
 </head>
@@ -95,89 +82,63 @@
 
 <h1>Sticker Generator</h1>
 
-<input id="text" placeholder="type: fire cat, cute dog, skull">
+<input id="text" placeholder="type: fire cat, skull, anime dog">
 
 <div class="row">
-  <button onclick="setStyle('cute')">Cute</button>
-  <button onclick="setStyle('anime')">Anime</button>
-  <button onclick="setStyle('graffiti')">Graffiti</button>
-  <button onclick="setStyle('3d')">3D</button>
-</div>
-
-<div class="row">
-  <button onclick="generate()">Generate Sticker</button>
-  <button onclick="downloadImage()">Download</button>
+  <button onclick="generate()">Generate</button>
+  <button onclick="toggleTools()">Tools</button>
 </div>
 
 <div id="status"></div>
 
 <img id="img">
 
-<div class="gallery" id="gallery"></div>
+<iframe id="frame"></iframe>
 
 <script>
-let style = "cute";
-
-function setStyle(s) {
-  style = s;
-}
-
-function buildPrompt(text) {
-  return `${text}, ${style} sticker, centered, clean background, high detail, die-cut sticker style`;
-}
+let toolsOpen = false;
 
 function generate() {
   const text = document.getElementById("text").value;
   if (!text) return;
 
-  const status = document.getElementById("status");
   const img = document.getElementById("img");
+  const status = document.getElementById("status");
 
   status.innerText = "Generating...";
 
-  const prompt = buildPrompt(text);
+  const prompt = text + ", sticker, clean background, high detail";
   const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
 
   img.src = url;
   img.style.display = "block";
 
-  img.onload = () => {
-    status.innerText = "Done";
-    saveToGallery(url);
-  };
+  img.onload = () => status.innerText = "Done";
 }
 
-function saveToGallery(url) {
-  let gallery = JSON.parse(localStorage.getItem("stickers") || "[]");
-  gallery.unshift(url);
-  gallery = gallery.slice(0, 10);
-  localStorage.setItem("stickers", JSON.stringify(gallery));
-  renderGallery();
+function toggleTools() {
+  const frame = document.getElementById("frame");
+
+  toolsOpen = !toolsOpen;
+
+  if (toolsOpen) {
+    frame.style.display = "block";
+
+    // TRY iframe load
+    frame.src = "https://perchance.org/ai-text-to-image-generator";
+
+    // fallback safety (if iframe breaks)
+    setTimeout(() => {
+      if (!frame.contentDocument) {
+        window.open(frame.src, "_blank");
+      }
+    }, 1500);
+
+  } else {
+    frame.style.display = "none";
+    frame.src = "";
+  }
 }
-
-function renderGallery() {
-  const gallery = JSON.parse(localStorage.getItem("stickers") || "[]");
-  const el = document.getElementById("gallery");
-  el.innerHTML = "";
-
-  gallery.forEach(url => {
-    const img = document.createElement("img");
-    img.src = url;
-    el.appendChild(img);
-  });
-}
-
-function downloadImage() {
-  const img = document.getElementById("img");
-  if (!img.src) return;
-
-  const a = document.createElement("a");
-  a.href = img.src;
-  a.download = "sticker.png";
-  a.click();
-}
-
-renderGallery();
 </script>
 
 </body>
