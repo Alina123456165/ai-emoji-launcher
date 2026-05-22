@@ -1,169 +1,62 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-
-<title>AI Sticker App</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<style>
-  body {
-    margin: 0;
-    font-family: system-ui;
-    background: #0b0b0b;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-
-    /* FIX: safe spacing for Dynamic Island / notch */
-    padding: 70px 12px 20px 12px;
-  }
-
-  input {
-    width: 100%;
-    max-width: 360px;
-    padding: 14px;
-    border-radius: 12px;
-    border: none;
-    font-size: 16px;
-  }
-
-  select {
-    width: 100%;
-    max-width: 360px;
-    padding: 12px;
-    border-radius: 10px;
-    margin-top: 8px;
-    border: none;
-  }
-
-  button {
-    margin-top: 10px;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: none;
-    background: white;
-    color: black;
-    font-weight: 600;
-  }
-
-  #img {
-    width: 280px;
-    height: 280px;
-    margin-top: 14px;
-    border-radius: 18px;
-    display: none;
-    object-fit: cover;
-  }
-
-  #status {
-    margin-top: 10px;
-    opacity: 0.7;
-  }
-
-  /* TOOL PANEL (fixed replacement for toggle iframe) */
-  #toolPanel {
-    position: fixed;
-    bottom: -60vh;
-    left: 0;
-    width: 100%;
-    height: 60vh;
-    background: #151515;
-    border-top-left-radius: 18px;
-    border-top-right-radius: 18px;
-    transition: 0.25s ease;
-    padding: 12px;
-  }
-
-  #toolPanel.open {
-    bottom: 0;
-  }
-
-  iframe {
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 12px;
-  }
-</style>
-</head>
-
-<body>
-
-<input id="text" placeholder="type: fire cat, anime skull">
-
-<select id="style">
-  <option value="cute sticker, soft lighting">Cute</option>
-  <option value="anime style, bold outline">Anime</option>
-  <option value="3d render, glossy, high detail">3D</option>
-  <option value="graffiti street art, bold colors">Graffiti</option>
-  <option value="minimal flat icon, clean design">Minimal</option>
-</select>
-
-<button onclick="generate()">Generate Sticker</button>
-<button onclick="toggleTool()">Open Tools</button>
-
-<div id="status"></div>
-
-<img id="img">
-
-<!-- TOOL DRAWER -->
-<div id="toolPanel">
-  <iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
-</div>
-
 <script>
 
-let toolOpen = false;
+let isGenerating = false;
+
+function setStatus(t) {
+  const el = document.getElementById("status");
+  if (el) el.innerText = t;
+}
 
 function generate() {
+  if (isGenerating) return; // 🔒 prevents back-to-back freeze
+
   const text = document.getElementById("text").value;
   if (!text) return;
 
   const style = document.getElementById("style").value;
-
   const img = document.getElementById("img");
-  const status = document.getElementById("status");
 
-  status.innerText = "Generating...";
+  isGenerating = true;
+  setStatus("Generating...");
 
-  const prompt = `${text}, ${style}, centered, sticker, high detail`;
+  // 🔥 cache-bust so every request is unique
+  const prompt = `${text}, ${style}, sticker, high detail, ${Date.now()}`;
 
-  const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
+  const url =
+    "https://image.pollinations.ai/prompt/" +
+    encodeURIComponent(prompt);
+
+  let done = false;
+
+  const timeout = setTimeout(() => {
+    if (!done) {
+      setStatus("Slow response... retrying");
+      isGenerating = false;
+    }
+  }, 8000); // 8s safety reset
 
   const test = new Image();
 
   test.onload = () => {
+    done = true;
+    clearTimeout(timeout);
+
     img.src = url;
     img.style.display = "block";
-    status.innerText = "Done";
+
+    setStatus("Done");
+    isGenerating = false;
   };
 
   test.onerror = () => {
-    status.innerText = "Retrying...";
-    img.src = url;
+    done = true;
+    clearTimeout(timeout);
+
+    setStatus("Retry failed — try again");
+    isGenerating = false;
   };
 
   test.src = url;
 }
 
-function toggleTool() {
-  const panel = document.getElementById("toolPanel");
-
-  toolOpen = !toolOpen;
-
-  if (toolOpen) {
-    panel.classList.add("open");
-  } else {
-    panel.classList.remove("open");
-  }
-}
-
 </script>
-
-</body>
-</html>
