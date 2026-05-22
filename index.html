@@ -29,22 +29,25 @@
     border: none;
     margin-top: 8px;
     font-size: 16px;
+    background: #1a1a1a;
+    color: white;
   }
 
   button {
     margin-top: 10px;
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-radius: 10px;
     border: none;
     background: white;
     color: black;
     font-weight: 600;
+    font-size: 16px;
   }
 
   #img {
     width: 280px;
     height: 280px;
-    margin-top: 12px;
+    margin-top: 14px;
     border-radius: 18px;
     display: none;
     object-fit: cover;
@@ -54,9 +57,10 @@
   #status {
     margin-top: 10px;
     opacity: 0.7;
+    min-height: 20px;
   }
 
-  /* Hidden iframe kept for app-view behavior */
+  /* hidden iframe keeps app-view behavior */
   iframe {
     position: absolute;
     width: 1px;
@@ -86,7 +90,7 @@
 
 <img id="img">
 
-<!-- Hidden iframe retained -->
+<!-- hidden iframe -->
 <iframe src="https://perchance.org/ai-text-to-image-generator"></iframe>
 
 <script>
@@ -104,42 +108,6 @@ function sleep(ms) {
 function buildUrl(prompt) {
   return "https://image.pollinations.ai/prompt/" +
     encodeURIComponent(prompt);
-}
-
-async function loadImage(url) {
-  return new Promise((resolve) => {
-
-    const imgLoader = new Image();
-
-    let finished = false;
-
-    const timeout = setTimeout(() => {
-      if (!finished) {
-        finished = true;
-        resolve(false);
-      }
-    }, 15000);
-
-    imgLoader.onload = () => {
-      if (finished) return;
-
-      finished = true;
-      clearTimeout(timeout);
-
-      resolve(true);
-    };
-
-    imgLoader.onerror = () => {
-      if (finished) return;
-
-      finished = true;
-      clearTimeout(timeout);
-
-      resolve(false);
-    };
-
-    imgLoader.src = url;
-  });
 }
 
 async function generate() {
@@ -164,42 +132,72 @@ async function generate() {
 
   setStatus("Generating...");
 
-  // IMPORTANT:
-  // randomized prompt prevents CDN reuse
-  const basePrompt =
-    `${text}, ${style}, sticker, high detail`;
+  // prevent browser cache reuse
+  const prompt =
+    `${text}, ${style}, sticker, high detail, ${Date.now()}`;
 
-  let success = false;
+  const url = buildUrl(prompt);
 
-  for (let i = 0; i < 3; i++) {
+  // clear previous handlers
+  img.onload = null;
+  img.onerror = null;
 
-    const uniquePrompt =
-      basePrompt + " " + Date.now() + " try" + i;
+  let finished = false;
 
-    const url = buildUrl(uniquePrompt);
+  const timeout = setTimeout(() => {
 
-    const loaded = await loadImage(url);
+    if (!finished) {
 
-    if (loaded) {
+      finished = true;
 
-      img.src = url;
-      img.style.display = "block";
+      setStatus("AI slow — try again");
 
-      setStatus("Done");
-
-      success = true;
-      break;
+      isGenerating = false;
     }
 
+  }, 20000);
+
+  img.onload = () => {
+
+    if (finished) return;
+
+    finished = true;
+
+    clearTimeout(timeout);
+
+    img.style.display = "block";
+
+    setStatus("Done");
+
+    isGenerating = false;
+  };
+
+  img.onerror = async () => {
+
+    if (finished) return;
+
+    finished = true;
+
+    clearTimeout(timeout);
+
     setStatus("Retrying...");
-    await sleep(1400);
-  }
 
-  if (!success) {
-    setStatus("AI is overloaded — try again");
-  }
+    await sleep(1500);
 
-  isGenerating = false;
+    // retry once with modified prompt
+    const retryPrompt =
+      prompt + " detailed";
+
+    img.src = buildUrl(retryPrompt);
+
+    setStatus("Done");
+
+    isGenerating = false;
+  };
+
+  // IMPORTANT:
+  // only one request now
+  img.src = url;
 }
 
 </script>
