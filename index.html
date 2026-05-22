@@ -55,6 +55,16 @@
     margin-top: 10px;
     opacity: 0.7;
   }
+
+  iframe {
+    width: 100%;
+    height: 55vh;
+    border: none;
+    border-radius: 12px;
+    margin-top: 12px;
+    display: none;
+    background: black;
+  }
 </style>
 </head>
 
@@ -65,66 +75,99 @@
 <select id="style">
   <option value="cute sticker, soft lighting">Cute</option>
   <option value="anime style, bold outline">Anime</option>
-  <option value="3d render, glossy">3D</option>
+  <option value="3d render, glossy, high detail">3D</option>
   <option value="graffiti street art">Graffiti</option>
   <option value="minimal flat icon">Minimal</option>
 </select>
 
 <button onclick="generate()">Generate</button>
+<button onclick="toggleTool()">Toggle Tool</button>
 
 <div id="status"></div>
 
 <img id="img">
+
+<iframe id="frame" src="https://perchance.org/ai-text-to-image-generator"></iframe>
 
 <script>
 
 let isGenerating = false;
 
 function setStatus(t) {
-  document.getElementById("status").innerText = t;
+  const el = document.getElementById("status");
+  if (el) el.innerText = t;
 }
 
-function generate() {
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+async function generate() {
   if (isGenerating) return;
 
-  const textEl = document.getElementById("text");
-  const styleEl = document.getElementById("style");
+  const text = document.getElementById("text").value.trim();
+  const style = document.getElementById("style").value;
   const img = document.getElementById("img");
 
-  if (!textEl || !styleEl || !img) return;
-
-  const text = textEl.value.trim();
   if (!text) return;
 
   isGenerating = true;
   setStatus("Generating...");
 
-  const prompt = `${text}, ${styleEl.value}, sticker, high detail, ${Date.now()}`;
+  await sleep(250); // prevents iOS race crash
 
+  const prompt = `${text}, ${style}, sticker, high detail, ${Date.now()}`;
   const url = "https://image.pollinations.ai/prompt/" + encodeURIComponent(prompt);
+
+  let done = false;
+
+  const timeout = setTimeout(() => {
+    if (!done) {
+      setStatus("Still generating... (AI is slow)");
+    }
+  }, 9000);
 
   const test = new Image();
 
-  const timeout = setTimeout(() => {
-    setStatus("Slow response...");
-    isGenerating = false;
-  }, 8000);
-
   test.onload = () => {
+    done = true;
     clearTimeout(timeout);
+
     img.src = url;
     img.style.display = "block";
+
     setStatus("Done");
     isGenerating = false;
   };
 
-  test.onerror = () => {
-    clearTimeout(timeout);
-    setStatus("Failed — retry");
+  test.onerror = async () => {
+    await sleep(1200);
+
+    if (!done) {
+      setStatus("Retrying...");
+
+      const retryUrl =
+        "https://image.pollinations.ai/prompt/" +
+        encodeURIComponent(prompt + " high quality");
+
+      img.src = retryUrl;
+    }
+
     isGenerating = false;
   };
 
   test.src = url;
+}
+
+function toggleTool() {
+  const frame = document.getElementById("frame");
+
+  if (frame.style.display === "block") {
+    frame.style.display = "none";
+    return;
+  }
+
+  frame.style.display = "block";
 }
 
 </script>
