@@ -1,262 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AI Genmoji Sticker Studio</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #0b0f19;
-            color: #f3f4f6;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-        .app-layout {
-            display: flex;
-            flex-direction: column;
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-        }
-        .preview-stage {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-image: radial-gradient(#1f2937 1px, transparent 1px);
-            background-size: 20px 20px;
-            padding: 1.5rem;
-            min-height: 0;
-            position: relative;
-        }
-        #sticker-output {
-            max-width: 85vw;
-            max-height: 50vh;
-            filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
-            display: none;
-            -webkit-touch-callout: default !important;
-            pointer-events: auto;
-            user-select: none;
-        }
-        .control-panel {
-            width: 100vw;
-            background-color: #111827;
-            border-top: 1px solid #1f2937;
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
-            z-index: 100;
-        }
-        .branding {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .branding h1 {
-            font-size: 1.2rem;
-            font-weight: 800;
-            background: linear-gradient(to right, #ff7e5f, #feb47b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .status-text {
-            font-size: 0.75rem;
-            color: #feb47b;
-            font-weight: 600;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 0.85rem 1rem;
-            background-color: #1f2937;
-            border: 2px solid #374151;
-            border-radius: 0.75rem;
-            color: white;
-            font-size: 16px; 
-            outline: none;
-            -webkit-appearance: none;
-        }
-        input[type="text"]:focus {
-            border-color: #feb47b;
-        }
-        .gen-btn {
-            background: linear-gradient(135deg, #ff7e5f, #feb47b);
-            color: #0b0f19;
-            padding: 1rem;
-            border: none;
-            border-radius: 0.75rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            cursor: pointer;
-            text-align: center;
-        }
-        .gen-btn:disabled {
-            background: #252d3d;
-            color: #6b7280;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-        .spinner {
-            width: 45px;
-            height: 45px;
-            border: 4px solid #1f2937;
-            border-top: 4px solid #feb47b;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            display: none;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #hidden-canvas { display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>YouTube Launcher</title>
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="YouTube">
+
+<style>
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: -apple-system, sans-serif;
+}
+
+#splash {
+    position: fixed;
+    inset: 0;
+    background: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.logo {
+    width: 110px;
+    height: 78px;
+    background: red;
+    border-radius: 22px;
+    position: relative;
+}
+
+.logo::before {
+    content: "";
+    position: absolute;
+    left: 42px;
+    top: 24px;
+    border-left: 26px solid white;
+    border-top: 15px solid transparent;
+    border-bottom: 15px solid transparent;
+}
+
+.text {
+    color: white;
+    margin-top: 22px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.sub {
+    color: #777;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.fadeout {
+    opacity: 0;
+    transition: opacity 0.45s ease;
+}
+</style>
 </head>
 <body>
 
-    <div class="app-layout">
-        <div class="preview-stage">
-            <div class="spinner" id="loading-spinner"></div>
-            <img id="sticker-output" alt="Your AI Sticker">
-        </div>
+<div id="splash">
+    <div class="logo"></div>
+    <div class="text">YouTube</div>
+    <div class="sub">Launching desktop mode...</div>
+</div>
 
-        <div class="control-panel">
-            <div class="branding">
-                <h1>AI Genmoji Studio</h1>
-                <span class="status-text" id="status-msg">Type a word to begin</span>
-            </div>
+<script>
+function launchYouTube() {
 
-            <div class="input-group">
-                <input type="text" id="prompt-input" value="" placeholder="Type anything (e.g. glass candy, ghost kitten)..." autocomplete="off" autocapitalize="off" autocorrect="off">
-            </div>
+    // desktop mode params
+    const url = "https://www.youtube.com/?app=desktop";
 
-            <button class="gen-btn" id="generate-btn">Generate AI Sticker</button>
-        </div>
-    </div>
+    // delay makes it feel app-like
+    setTimeout(() => {
+        document.getElementById("splash").classList.add("fadeout");
 
-    <canvas id="hidden-canvas" width="512" height="512"></canvas>
+        setTimeout(() => {
+            window.location.href = url;
+        }, 450);
 
-    <script>
-        const promptInput = document.getElementById('prompt-input');
-        const generateBtn = document.getElementById('generate-btn');
-        const statusMsg = document.getElementById('status-msg');
-        const spinner = document.getElementById('loading-spinner');
-        const imgOutput = document.getElementById('sticker-output');
-        const canvas = document.getElementById('hidden-canvas');
-        const ctx = canvas.getContext('2d');
+    }, 900);
+}
 
-        window.addEventListener('DOMContentLoaded', () => {
-            promptInput.value = '';
-        });
+launchYouTube();
+</script>
 
-        async function generateAISticker() {
-            const query = promptInput.value.trim();
-            if (!query) return alert("Type your sticker idea first!");
-
-            generateBtn.disabled = true;
-            spinner.style.display = "block";
-            imgOutput.style.display = "none";
-            statusMsg.textContent = "AI is drawing your sticker...";
-
-            // Enhancing prompt text layout to force a pure black background mask structure
-            const optimizedPrompt = `${query}, cute 3d emoji sticker icon, isolated centered single object, solid completely black background, digital art vector illustration app style, fine resolution details`;
-
-            try {
-                // Official secure infrastructure endpoint bypasses public proxy restrictions [1]
-                const response = await fetch("https://modelslab.com", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        key: "ml-6f01da13426e8dbdbcb1a09d3da518e2", // Active production developer token
-                        prompt: optimizedPrompt,
-                        negative_prompt: "text, words, logo, watermark, background scene, complex layout",
-                        width: "512",
-                        height: "512",
-                        samples: "1",
-                        num_inference_steps: "21",
-                        safety_checker: "yes",
-                        enhance_prompt: "no",
-                        seed: Math.floor(Math.random() * 99999)
-                    })
-                });
-
-                const data = await response.json();
-                
-                // Track backend execution states
-                let imageUrl = "";
-                if (data.status === "success" && data.output && data.output.length > 0) {
-                    imageUrl = data.output[0];
-                } else if (data.status === "processing" && data.future_links && data.future_links.length > 0) {
-                    // Fallback to queue pool link if server load forces a queued render frame
-                    imageUrl = data.future_links[0];
-                } else {
-                    throw new Error("API returned an invalid status payload layout");
-                }
-
-                // Load image into native thread to cut the sticker edges out
-                const aiImageElement = new Image();
-                aiImageElement.crossOrigin = "anonymous";
-                aiImageElement.src = imageUrl;
-
-                aiImageElement.onload = function() {
-                    statusMsg.textContent = "Isolating alpha and cutting vinyl edges...";
-                    processStickerLayers(aiImageElement);
-                };
-
-                aiImageElement.onerror = function() {
-                    // Safe fallback directly presenting the URL if local canvas image array tracing bugs out
-                    imgOutput.src = imageUrl;
-                    showFinalSticker();
-                };
-
-            } catch (error) {
-                console.error(error);
-                statusMsg.textContent = "Server load issue. Click generate again.";
-                generateBtn.disabled = false;
-                spinner.style.display = "none";
-            }
-        }
-
-        function processStickerLayers(rawAiImage) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(rawAiImage, 0, 0, canvas.width, canvas.height);
-            
-            const matrixData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const binaryPixels = matrixData.data;
-
-            // Background Removal (Chroma Keying out the solid black backdrop)
-            for (let i = 0; i < binaryPixels.length; i += 4) {
-                if (binaryPixels[i] < 45 && binaryPixels[i+1] < 45 && binaryPixels[i+2] < 45) {
-                    binaryPixels[i + 3] = 0; 
-                }
-            }
-            ctx.putImageData(matrixData, 0, 0);
-
-            const maskCanvas = document.createElement('canvas');
-            maskCanvas.width = canvas.width;
-            maskCanvas.height = canvas.height;
-            const maskCtx = maskCanvas.getContext('2d');
-            maskCtx.drawImage(canvas, 0, 0);
-
-            // Stamp solid white outline border sheet around alpha mask silhouette bounds
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-            ctx.shadowBlur = 12;
-            ctx.shadowOffsetY = 6;
-
-
+</body>
+</html>
 
 
 
